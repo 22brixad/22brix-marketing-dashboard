@@ -527,15 +527,19 @@ function renderOverview(s,e,ps,pe){
     ['네이버 광고', nv, 'tag-naver'],
     ['구글 광고', gg, 'tag-google'],
   ];
-  let html='<thead><tr><th>채널</th><th>광고비</th><th>노출</th><th>클릭</th><th>CTR</th><th>CPC</th><th>전환</th><th>비용 비중</th></tr></thead><tbody>';
+  let html='<thead><tr><th>채널</th><th>광고비</th><th>노출</th><th>클릭</th><th>CTR</th><th>CPC</th><th>전환</th><th>CVR</th><th>CPA</th><th>비용 비중</th></tr></thead><tbody>';
   rows.forEach(([nm,o,tg])=>{
+    const cv=o.conv||0;
     html+=`<tr><td class="name"><span class="chan-tag ${tg}">${nm.includes('네이버')?'N':'G'}</span>${nm}</td>
       <td>${won(o.cost)}</td><td>${num(o.imp)}</td><td>${num(o.clk)}</td>
-      <td>${fmtPct(pct(o.clk,o.imp))}</td><td>${won(o.clk?o.cost/o.clk:0)}</td><td>${num(o.conv||0)}</td>
+      <td>${fmtPct(pct(o.clk,o.imp))}</td><td>${won(o.clk?o.cost/o.clk:0)}</td><td>${num(cv)}</td>
+      <td>${fmtPct(pct(cv,o.clk))}</td><td>${cv>0?won(o.cost/cv):'–'}</td>
       <td>${fmtPct(pct(o.cost,tCost))}</td></tr>`;
   });
+  const tConv=nv.conv+gg.conv;
   html+=`<tr style="font-weight:800;background:#fafbfd"><td>합계</td><td>${won(tCost)}</td><td>${num(tImp)}</td><td>${num(tClk)}</td>
-    <td>${fmtPct(ctr)}</td><td>${won(cpc)}</td><td>${num(nv.conv+gg.conv)}</td><td>100.0%</td></tr></tbody>`;
+    <td>${fmtPct(ctr)}</td><td>${won(cpc)}</td><td>${num(tConv)}</td>
+    <td>${fmtPct(pct(tConv,tClk))}</td><td>${tConv>0?won(tCost/tConv):'–'}</td><td>100.0%</td></tr></tbody>`;
   document.getElementById('ovChannelTable').innerHTML=html;
 
   // charts
