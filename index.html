@@ -159,6 +159,7 @@
     <div class="tab active" data-tab="overview">📊 통합 요약</div>
     <div class="tab" data-tab="ads">📣 광고 성과</div>
     <div class="tab" data-tab="ga4">🌐 GA4 (Looker Studio)</div>
+    <div class="tab" data-tab="segments">🔎 광고 상세</div>
   </div>
 
   <div id="cmpBanner" style="display:none" class="card" >
@@ -312,6 +313,39 @@
     </div>
   </section>
 
+  <!-- ============ SEGMENTS (광고 상세) ============ -->
+  <section id="segments" style="display:none">
+    <p class="hint" style="margin:0 0 4px">모든 표·차트는 <b>전체 기간(2026-03-16~06-22)</b> 기준입니다 · 비용은 원(네이버 VAT포함, 구글 micros 환산).</p>
+
+    <div class="section-title">검색어별 성과 <span class="badge warn">전체 기간</span></div>
+    <div class="grid two-col">
+      <div class="card"><h3 style="margin:0 0 6px;font-size:14px"><span class="chan-tag tag-naver">N</span>네이버 검색어 Top</h3><div class="scroll-x" style="max-height:380px"><table id="nvSearchTable"></table></div></div>
+      <div class="card"><h3 style="margin:0 0 6px;font-size:14px"><span class="chan-tag tag-google">G</span>구글 검색어 Top</h3><div class="scroll-x" style="max-height:380px"><table id="ggSearchTable"></table></div></div>
+    </div>
+
+    <div class="section-title">매체 / 네트워크별 성과 <span class="badge warn">전체 기간</span></div>
+    <div class="grid two-col">
+      <div class="card"><h3 style="margin:0 0 6px;font-size:14px"><span class="chan-tag tag-naver">N</span>네이버 매체별</h3><div class="scroll-x"><table id="nvMediaTable"></table></div></div>
+      <div class="card"><h3 style="margin:0 0 6px;font-size:14px"><span class="chan-tag tag-google">G</span>구글 네트워크별</h3><div class="scroll-x"><table id="ggNetworkTable"></table></div>
+        <p class="hint">MIXED = P맥스 등 여러 네트워크 혼합</p></div>
+    </div>
+
+    <div class="section-title">요일 · 시간대별 성과 <span class="badge warn">전체 기간</span></div>
+    <div class="grid two-col">
+      <div class="card chart-card"><h3>요일별 광고비 (네이버 vs 구글)</h3><div class="chart-box"><canvas id="dowChart"></canvas></div></div>
+      <div class="card chart-card"><h3>시간대별 광고비 · 클릭 (구글)</h3><div class="chart-box"><canvas id="hourChart"></canvas></div>
+        <p class="hint">⚠️ 네이버는 시간대별 데이터를 제공하지 않아 구글만 표시</p></div>
+    </div>
+
+    <div class="section-title">연령대 · 성별 성과 <span class="badge warn">전체 기간</span></div>
+    <div class="grid two-col">
+      <div class="card chart-card"><h3>연령대별 광고비 — 네이버</h3><div class="chart-box sm"><canvas id="nvAgeChart"></canvas></div></div>
+      <div class="card chart-card"><h3>연령대별 광고비 — 구글</h3><div class="chart-box sm"><canvas id="ggAgeChart"></canvas></div></div>
+    </div>
+    <div class="card chart-card" style="margin-top:14px"><h3>성별 광고비 (네이버 vs 구글)</h3><div class="chart-box sm"><canvas id="genderChart"></canvas></div>
+      <p class="hint">연령·성별: 네이버=타겟 기준 분배 / 구글=인구통계 추정(상당수 '알 수 없음' — P맥스 특성). 분포 참고용.</p></div>
+  </section>
+
   <div class="foot" id="footNotes"></div>
 </div>
 
@@ -410,7 +444,24 @@ const D = {
   googleConv: parseCSV(GOOGLE_CONV, ['date','act','conv','allConv'],2),
   googleCampAllConv: parseCSV(GOOGLE_CAMP_ALLCONV, ['date','camp','allConv'],2),
   landing: parseCSV(GA4_LANDING, ['path','sessions','conv','eng'],1),
+  nvSearch: parseCSV(NV_SEARCH, ['kw','imp','clk','cost'],1),
+  ggSearch: parseCSV(GG_SEARCH, ['kw','imp','clk','cost','conv'],1),
+  nvMedia: parseCSV(NV_MEDIA, ['m','imp','clk','cost'],1),
+  ggNetwork: parseCSV(GG_NETWORK, ['net','imp','clk','cost','conv'],1),
+  nvDow: parseCSV(NV_DOW, ['dow','imp','clk','cost'],0),
+  ggDow: parseCSV(GG_DOW, ['day','imp','clk','cost','conv'],1),
+  ggHour: parseCSV(GG_HOUR, ['hour','imp','clk','cost','conv'],0),
+  nvAge: parseCSV(NV_AGE, ['code','imp','clk','cost'],1),
+  ggAge: parseCSV(GG_AGE, ['range','imp','clk','cost','conv'],1),
+  nvGender: parseCSV(NV_GENDER, ['code','imp','clk','cost'],1),
+  ggGender: parseCSV(GG_GENDER, ['g','imp','clk','cost','conv'],1),
 };
+const NV_AGE_LABEL={AG0013:'~13세',AG1418:'14-18',AG1924:'19-24',AG2529:'25-29',AG3034:'30-34',AG3539:'35-39',AG4044:'40-44',AG4549:'45-49',AG5054:'50-54',AG5559:'55-59',AG6099:'60세+',AGXXXX:'알 수 없음'};
+const GG_AGE_LABEL={AGE_RANGE_18_24:'18-24',AGE_RANGE_25_34:'25-34',AGE_RANGE_35_44:'35-44',AGE_RANGE_45_54:'45-54',AGE_RANGE_55_64:'55-64',AGE_RANGE_65_UP:'65세+',AGE_RANGE_UNDETERMINED:'알 수 없음'};
+const DOW_LABEL=['일','월','화','수','목','금','토'];
+const GG_DOW_IDX={SUNDAY:0,MONDAY:1,TUESDAY:2,WEDNESDAY:3,THURSDAY:4,FRIDAY:5,SATURDAY:6};
+const NET_LABEL={SEARCH:'검색',SEARCH_PARTNERS:'검색 파트너',MIXED:'혼합(P맥스 등)'};
+const GENDER_LABEL={GNM:'남성',GNF:'여성',GNU:'알 수 없음',MALE:'남성',FEMALE:'여성',UNDETERMINED:'알 수 없음'};
 // 구글 전체 전환(all_conversions) 합계 — 기간 필터
 function googleAllConvSum(s,e){ let c=0; D.googleConv.forEach(r=>{ if(inRange(r.date,s,e)) c+=r.allConv; }); return c; }
 // 구글 전환 액션 라벨/카테고리(사용자 표시용)
@@ -782,6 +833,47 @@ function renderGA4(s,e,ps,pe){
   lt+='</tbody>'; document.getElementById('gaLandingTable').innerHTML=lt;
 }
 
+/* ---------------- segments (광고 상세) — 전체 기간, 1회 렌더 ---------------- */
+function segTable(el, headName, rows, labelFn, hasConv){
+  let h=`<thead><tr><th>${headName}</th><th>노출</th><th>클릭</th><th>비용</th><th>CTR</th><th>CPC</th>${hasConv?'<th>전환</th>':''}</tr></thead><tbody>`;
+  rows.forEach(r=>{ h+=`<tr><td class="name">${labelFn(r)}</td><td>${num(r.imp)}</td><td>${num(r.clk)}</td><td>${won(r.cost)}</td><td>${fmtPct(pct(r.clk,r.imp))}</td><td>${won(r.clk?r.cost/r.clk:0)}</td>${hasConv?`<td>${num(r.conv||0)}</td>`:''}</tr>`; });
+  h+='</tbody>'; document.getElementById(el).innerHTML=h;
+}
+function renderSegments(){
+  // 검색어
+  segTable('nvSearchTable','검색어', D.nvSearch, r=>r.kw, false);
+  segTable('ggSearchTable','검색어', D.ggSearch, r=>r.kw, true);
+  // 매체/네트워크
+  segTable('nvMediaTable','매체', D.nvMedia, r=>r.m, false);
+  segTable('ggNetworkTable','네트워크', D.ggNetwork, r=>NET_LABEL[r.net]||r.net, true);
+  // 요일
+  const nvByDow=[0,0,0,0,0,0,0]; D.nvDow.forEach(r=>nvByDow[r.dow-1]=r.cost);
+  const ggByDow=[0,0,0,0,0,0,0]; D.ggDow.forEach(r=>ggByDow[GG_DOW_IDX[r.day]]=r.cost);
+  drawChart('dowChart',{type:'bar',data:{labels:DOW_LABEL,datasets:[
+    {label:'네이버',data:nvByDow,backgroundColor:'#03c75a',borderRadius:4},
+    {label:'구글',data:ggByDow,backgroundColor:'#4285f4',borderRadius:4}]},options:barWonOpt()});
+  // 시간대 (구글)
+  const hours=D.ggHour.slice().sort((a,b)=>a.hour-b.hour);
+  drawChart('hourChart',{type:'bar',data:{labels:hours.map(h=>h.hour+'시'),datasets:[
+    {label:'광고비',data:hours.map(h=>h.cost),backgroundColor:'#c3d4f5',yAxisID:'y'},
+    {label:'클릭',type:'line',data:hours.map(h=>h.clk),borderColor:'#1a73e8',backgroundColor:'#1a73e8',tension:.3,yAxisID:'y1'}]},options:dualAxis()});
+  // 연령 — 네이버
+  const nvAgeOrder=['AG0013','AG1418','AG1924','AG2529','AG3034','AG3539','AG4044','AG4549','AG5054','AG5559','AG6099','AGXXXX'];
+  const nvAgeMap=Object.fromEntries(D.nvAge.map(r=>[r.code,r.cost]));
+  drawChart('nvAgeChart',{type:'bar',data:{labels:nvAgeOrder.map(c=>NV_AGE_LABEL[c]),datasets:[{label:'광고비',data:nvAgeOrder.map(c=>nvAgeMap[c]||0),backgroundColor:'#03c75a',borderRadius:4}]},options:barWonOpt(true)});
+  // 연령 — 구글
+  const ggAgeOrder=['AGE_RANGE_18_24','AGE_RANGE_25_34','AGE_RANGE_35_44','AGE_RANGE_45_54','AGE_RANGE_55_64','AGE_RANGE_65_UP','AGE_RANGE_UNDETERMINED'];
+  const ggAgeMap=Object.fromEntries(D.ggAge.map(r=>[r.range,r.cost]));
+  drawChart('ggAgeChart',{type:'bar',data:{labels:ggAgeOrder.map(c=>GG_AGE_LABEL[c]),datasets:[{label:'광고비',data:ggAgeOrder.map(c=>ggAgeMap[c]||0),backgroundColor:'#4285f4',borderRadius:4}]},options:barWonOpt(true)});
+  // 성별
+  const gOrder=[['남성','GNM','MALE'],['여성','GNF','FEMALE'],['알 수 없음','GNU','UNDETERMINED']];
+  const nvG=Object.fromEntries(D.nvGender.map(r=>[r.code,r.cost]));
+  const ggG=Object.fromEntries(D.ggGender.map(r=>[r.g,r.cost]));
+  drawChart('genderChart',{type:'bar',data:{labels:gOrder.map(x=>x[0]),datasets:[
+    {label:'네이버',data:gOrder.map(x=>nvG[x[1]]||0),backgroundColor:'#03c75a',borderRadius:4},
+    {label:'구글',data:gOrder.map(x=>ggG[x[2]]||0),backgroundColor:'#4285f4',borderRadius:4}]},options:barWonOpt()});
+}
+
 /* ---------------- chart helpers ---------------- */
 const charts={};
 function drawChart(id,cfg){
@@ -818,6 +910,8 @@ function donutOpt(showWon){return {responsive:true,maintainAspectRatio:false,cut
     return `${c.label}: ${showWon?won(v):num(v)} (${(v/tot*100).toFixed(1)}%)`;}}}}};}
 function hbarOpt(){return {indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
   scales:{x:{grid:{color:'#f0f2f6'},ticks:{callback:v=>num(v)}},y:{grid:{display:false}}}};}
+function barWonOpt(noLegend){return {responsive:true,maintainAspectRatio:false,plugins:{legend:{display:!noLegend,position:'bottom'}},
+  scales:{x:{grid:{display:false}},y:{grid:{color:'#f0f2f6'},ticks:{callback:wonTick}}}};}
 
 /* ---------------- main render ---------------- */
 function render(){
@@ -842,7 +936,7 @@ function render(){
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
   t.classList.add('active');
-  ['overview','ads','ga4'].forEach(id=> document.getElementById(id).style.display='none');
+  ['overview','ads','ga4','segments'].forEach(id=> document.getElementById(id).style.display='none');
   document.getElementById(t.dataset.tab).style.display='block';
 }));
 
@@ -946,6 +1040,7 @@ const GATE_PW = '22brix2026';
 
 /* ---------------- init ---------------- */
 render();
+renderSegments();   // 전체 기간 고정 — 1회 렌더
 </script>
 </body>
 </html>
