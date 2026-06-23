@@ -22,6 +22,8 @@
   .brand{display:flex;align-items:center;gap:12px}
   .brand .logo{width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#1a73e8,#03c75a);
        color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:15px;letter-spacing:-.5px}
+  .brand-logo{height:38px;width:auto;display:block}
+  .gate-logo{max-width:210px;width:78%;height:auto;margin:0 auto 16px;display:block}
   .brand h1{font-size:19px;margin:0;font-weight:800;letter-spacing:-.4px}
   .brand p{margin:2px 0 0;color:var(--muted);font-size:12px}
   .topright{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -133,9 +135,10 @@
 <div class="wrap">
   <header class="top">
     <div class="brand">
-      <div class="logo">22B</div>
+      <img class="brand-logo" src="logo.png" alt="22Brix" onerror="this.style.display='none';document.getElementById('brandFallback').style.display='flex'">
+      <div class="logo" id="brandFallback" style="display:none">22B</div>
       <div>
-        <h1>22Brix 통합 마케팅 대시보드</h1>
+        <h1>통합 마케팅 대시보드</h1>
         <p>네이버 광고 · 구글 광고 · GA4 &nbsp;|&nbsp; 데이터: 팡고뉴로(Pango)</p>
       </div>
     </div>
@@ -315,8 +318,9 @@
 <!-- ============ PASSWORD GATE ============ -->
 <div class="gate" id="gate">
   <div class="gate-box">
-    <div class="logo">22B</div>
-    <h2>22Brix 통합 마케팅 대시보드</h2>
+    <img class="gate-logo" src="logo.png" alt="22Brix" onerror="this.style.display='none';document.getElementById('gateFallback').style.display='flex'">
+    <div class="logo" id="gateFallback" style="display:none;margin:0 auto 14px">22B</div>
+    <h2>통합 마케팅 대시보드</h2>
     <p>접근하려면 비밀번호를 입력하세요.</p>
     <input type="password" id="gatePw" placeholder="비밀번호" autocomplete="off" />
     <div class="gate-err" id="gateErr"></div>
