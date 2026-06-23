@@ -1,0 +1,12 @@
+# OS / 에디터
+.DS_Store
+Thumbs.db
+*.log
+
+# 파이썬 로컬 서버 부산물
+__pycache__/
+*.pyc
+
+# 임시
+*.tmp
+_app_check.js

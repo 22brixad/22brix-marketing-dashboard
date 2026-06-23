@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>22Brix 통합 마케팅 대시보드</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#f4f6fa; --card:#fff; --ink:#1f2430; --muted:#6b7280; --line:#e7eaf0;
+    --blue:#1a73e8; --blue-soft:#e8f0fe; --green:#03c75a; --google:#ea4335;
+    --naver:#03c75a; --gad:#4285f4; --ga4:#f9ab00; --pos:#137333; --neg:#c5221f;
+    --shadow:0 1px 3px rgba(16,24,40,.06),0 1px 2px rgba(16,24,40,.04);
+    --shadow-lg:0 8px 28px rgba(16,24,40,.14);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Pretendard','Apple SD Gothic Neo',-apple-system,'Malgun Gothic',sans-serif;
+       background:var(--bg);color:var(--ink);font-size:14px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1280px;margin:0 auto;padding:20px 24px 60px}
+  /* header */
+  header.top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand .logo{width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#1a73e8,#03c75a);
+       color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:15px;letter-spacing:-.5px}
+  .brand h1{font-size:19px;margin:0;font-weight:800;letter-spacing:-.4px}
+  .brand p{margin:2px 0 0;color:var(--muted);font-size:12px}
+  .topright{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .pill{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 11px;font-size:12px;color:var(--muted);box-shadow:var(--shadow)}
+  .pill b{color:var(--ink)}
+  .daterange-btn{display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line);
+       border-radius:11px;padding:9px 14px;cursor:pointer;box-shadow:var(--shadow);font-weight:600;color:var(--ink);transition:.15s}
+  .daterange-btn:hover{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft)}
+  .daterange-btn .cal{font-size:16px}
+  .daterange-btn small{display:block;color:var(--muted);font-weight:500;font-size:11px}
+  /* tabs */
+  .tabs{display:flex;gap:6px;margin-bottom:18px;border-bottom:1px solid var(--line)}
+  .tab{padding:11px 18px;cursor:pointer;font-weight:600;color:var(--muted);border-bottom:2.5px solid transparent;margin-bottom:-1px;transition:.15s}
+  .tab:hover{color:var(--ink)}
+  .tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+  /* cards / grid */
+  .grid{display:grid;gap:14px}
+  .kpis{grid-template-columns:repeat(auto-fit,minmax(155px,1fr))}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow)}
+  .kpi .lab{color:var(--muted);font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px}
+  .kpi .val{font-size:24px;font-weight:800;margin-top:7px;letter-spacing:-.5px}
+  .kpi .sub{font-size:11.5px;color:var(--muted);margin-top:3px}
+  .delta{font-size:12px;font-weight:700;margin-top:6px;display:inline-flex;align-items:center;gap:3px}
+  .delta.pos{color:var(--pos)} .delta.neg{color:var(--neg)} .delta.flat{color:var(--muted)}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .section-title{font-size:15px;font-weight:800;margin:26px 2px 12px;letter-spacing:-.3px;display:flex;align-items:center;gap:8px}
+  .badge{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--blue-soft);color:var(--blue)}
+  .badge.warn{background:#fef3c7;color:#92660a}
+  .chart-card{position:relative}
+  .chart-card h3{margin:0 0 12px;font-size:14px;font-weight:700}
+  .chart-box{position:relative;height:300px;width:100%;min-width:0}
+  .chart-box.sm{height:240px}
+  .chart-box canvas{position:absolute;inset:0}
+  .two-col{grid-template-columns:1fr 1fr}
+  .three-col{grid-template-columns:1.3fr 1fr 1fr}
+  @media(max-width:900px){.two-col,.three-col{grid-template-columns:1fr}}
+  /* table */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:9px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--muted);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.3px;cursor:default}
+  tbody tr:hover{background:#fafbfd}
+  td.name{font-weight:600;max-width:280px;overflow:hidden;text-overflow:ellipsis}
+  .chan-tag{font-size:10.5px;font-weight:700;padding:1.5px 7px;border-radius:6px;margin-right:6px;color:#fff}
+  .tag-naver{background:var(--naver)} .tag-google{background:var(--gad)}
+  .scroll-x{overflow-x:auto}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:4px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .hint{color:var(--muted);font-size:11.5px;margin-top:8px}
+  .nodata{padding:36px;text-align:center;color:var(--muted)}
+  /* date picker modal */
+  .overlay{position:fixed;inset:0;background:rgba(16,24,40,.38);display:none;align-items:center;justify-content:center;z-index:50}
+  .overlay.open{display:flex}
+  .picker{background:#fff;border-radius:16px;box-shadow:var(--shadow-lg);width:660px;max-width:95vw;overflow:hidden;display:flex;flex-direction:column}
+  .picker-body{display:flex;max-height:74vh}
+  .presets{width:200px;border-right:1px solid var(--line);padding:10px;overflow-y:auto;flex-shrink:0}
+  .preset{padding:11px 14px;border-radius:9px;cursor:pointer;font-size:13.5px;font-weight:500;color:var(--ink);margin-bottom:2px}
+  .preset:hover{background:#f4f6fa}
+  .preset.active{background:var(--blue);color:#fff;font-weight:600}
+  .cmp-toggle{display:flex;align-items:center;gap:9px;padding:14px 14px 4px;margin-top:8px;border-top:1px solid var(--line);font-size:13.5px}
+  .switch{position:relative;width:40px;height:22px;flex-shrink:0}
+  .switch input{opacity:0;width:0;height:0}
+  .slider{position:absolute;inset:0;background:#cbd2dd;border-radius:22px;transition:.2s;cursor:pointer}
+  .slider:before{content:"";position:absolute;width:16px;height:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+  .switch input:checked+.slider{background:var(--blue)}
+  .switch input:checked+.slider:before{transform:translateX(18px)}
+  .help{width:16px;height:16px;border-radius:50%;background:#e7eaf0;color:var(--muted);font-size:11px;
+        display:inline-flex;align-items:center;justify-content:center;cursor:help;font-weight:700}
+  .cal-area{flex:1;padding:16px 18px;overflow-y:auto;min-width:0}
+  .date-inputs{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .date-inputs .di{flex:1;border:1.5px solid var(--line);border-radius:9px;padding:9px 12px;font-weight:600;text-align:center;font-size:13.5px}
+  .date-inputs .di.act{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft)}
+  .date-inputs .arrow{color:var(--muted)}
+  .weekhead{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:11.5px;color:var(--muted);font-weight:600;padding:4px 0;position:sticky;top:0;background:#fff;z-index:2}
+  .weekhead .sun{color:#e5484d}.weekhead .sat{color:#3b82f6}
+  .month{margin-bottom:14px}
+  .month .mlabel{font-size:13px;font-weight:700;color:var(--muted);margin:6px 2px 8px}
+  .days{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+  .day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:13px;border-radius:8px;cursor:pointer;position:relative;color:var(--ink)}
+  .day:hover{background:var(--blue-soft)}
+  .day.empty{visibility:hidden}
+  .day.disabled{color:#c7ccd6;cursor:not-allowed}
+  .day.disabled:hover{background:none}
+  .day.in-range{background:#eaf2fe;border-radius:0}
+  .day.range-start{background:var(--blue);color:#fff;border-radius:8px 0 0 8px}
+  .day.range-end{background:var(--blue);color:#fff;border-radius:0 8px 8px 0}
+  .day.range-start.range-end{border-radius:8px}
+  .picker-foot{display:flex;justify-content:flex-end;gap:10px;padding:13px 18px;border-top:1px solid var(--line);background:#fafbfd}
+  .btn{padding:9px 22px;border-radius:9px;font-weight:700;cursor:pointer;border:1px solid var(--line);background:#fff;font-size:13.5px}
+  .btn.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+  .btn:hover{filter:brightness(.98)}
+  .cmp-note{font-size:11.5px;color:var(--blue);font-weight:600;margin-left:6px}
+  .foot{margin-top:30px;color:var(--muted);font-size:11.5px;line-height:1.7;border-top:1px solid var(--line);padding-top:14px}
+  /* password gate */
+  .gate{position:fixed;inset:0;background:linear-gradient(135deg,#1a73e8,#03c75a);display:flex;align-items:center;justify-content:center;z-index:9999}
+  .gate.hidden{display:none}
+  .gate-box{background:#fff;border-radius:18px;padding:34px 30px;width:350px;max-width:90vw;box-shadow:var(--shadow-lg);text-align:center}
+  .gate-box .logo{width:52px;height:52px;border-radius:14px;margin:0 auto 14px;background:linear-gradient(135deg,#1a73e8,#03c75a);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:17px}
+  .gate-box h2{margin:0 0 4px;font-size:17px;font-weight:800}
+  .gate-box p{margin:0 0 18px;color:var(--muted);font-size:12.5px}
+  .gate-box input{width:100%;padding:11px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:14px;text-align:center}
+  .gate-box input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft)}
+  .gate-err{color:var(--neg);font-size:12px;min-height:18px;margin:8px 0 4px}
+  .gate-box button{width:100%;padding:11px;border:none;border-radius:10px;background:var(--blue);color:#fff;font-weight:700;font-size:14px;cursor:pointer}
+  .gate-box button:hover{filter:brightness(.96)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="logo">22B</div>
+      <div>
+        <h1>22Brix 통합 마케팅 대시보드</h1>
+        <p>네이버 광고 · 구글 광고 · GA4 &nbsp;|&nbsp; 데이터: 팡고뉴로(Pango)</p>
+      </div>
+    </div>
+    <div class="topright">
+      <span class="pill">데이터 기준 <b id="freshness">~2026-06-22</b></span>
+      <div class="daterange-btn" id="openPicker">
+        <span class="cal">📅</span>
+        <div>
+          <span id="rangeLabel">최근 7일 (오늘 제외)</span>
+          <small id="rangeDates">2026.06.16 ~ 2026.06.22</small>
+        </div>
+        <span style="color:var(--muted)">▾</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="overview">📊 통합 요약</div>
+    <div class="tab" data-tab="ads">📣 광고 성과</div>
+    <div class="tab" data-tab="ga4">🌐 GA4 (Looker Studio)</div>
+  </div>
+
+  <div id="cmpBanner" style="display:none" class="card" >
+    <b style="color:var(--blue)">🔁 기간 비교 모드</b>
+    <span id="cmpBannerTxt" style="color:var(--muted)"></span>
+  </div>
+
+  <!-- ============ OVERVIEW ============ -->
+  <section id="overview">
+    <div class="grid kpis" id="ovKpis"></div>
+
+    <div class="grid three-col" style="margin-top:14px">
+      <div class="card chart-card">
+        <h3>일별 광고비 추이 (채널별)</h3>
+        <div class="chart-box"><canvas id="ovTrend"></canvas></div>
+      </div>
+      <div class="card chart-card">
+        <h3>매체 비용 비중</h3>
+        <div class="chart-box"><canvas id="ovMix"></canvas></div>
+      </div>
+      <div class="card chart-card">
+        <h3>광고 클릭 vs GA4 세션</h3>
+        <div class="chart-box"><canvas id="ovClickSession"></canvas></div>
+      </div>
+    </div>
+
+    <div class="section-title">채널 요약 비교</div>
+    <div class="card scroll-x">
+      <table id="ovChannelTable"></table>
+    </div>
+  </section>
+
+  <!-- ============ ADS ============ -->
+  <section id="ads" style="display:none">
+    <div class="grid kpis" id="adKpis"></div>
+
+    <div class="grid two-col" style="margin-top:14px">
+      <div class="card chart-card">
+        <h3>일별 광고비 (네이버 vs 구글)</h3>
+        <div class="chart-box"><canvas id="adCost"></canvas></div>
+      </div>
+      <div class="card chart-card">
+        <h3>일별 노출 · 클릭</h3>
+        <div class="chart-box"><canvas id="adImpClick"></canvas></div>
+      </div>
+    </div>
+
+    <div class="section-title">캠페인별 성과 <span class="badge" id="campCount"></span></div>
+    <div class="card scroll-x">
+      <table id="campTable"></table>
+    </div>
+
+    <div class="section-title">전환 상세 (전환 종류별)</div>
+    <div class="grid three-col">
+      <div class="card">
+        <h3 style="margin:0 0 4px;font-size:14px"><span class="chan-tag tag-naver">N</span>네이버 전환</h3>
+        <div class="scroll-x"><table id="nvConvTable"></table></div>
+        <p class="hint">직접/간접 전환 구분. 라벨: 대행문의 완료(lead) · 무료상담 신청 완료(add_to_cart)</p>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 4px;font-size:14px"><span class="chan-tag tag-google">G</span>구글 전환</h3>
+        <div class="scroll-x"><table id="ggConvTable"></table></div>
+        <p class="hint">KPI 카드(구글 전환)는 이제 <b>전체 전환</b> 기준(보조 포함). 주요 전환 = generate_lead만 구글 '전환'으로 집계되던 값. ⚠️ 전체 전환의 대부분(브로슈어 다운로드)은 해외/봇 의심 트래픽에서 발생 → 한국 only 지표와 함께 해석 권장. ※ 전체 전환은 모델링 추정치라 반올림.</p>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 4px;font-size:14px"><span class="dot" style="background:var(--ga4);margin-right:6px"></span>GA4 전환 <span class="badge warn">전체 기간</span></h3>
+        <div class="scroll-x"><table id="ga4ConvTable"></table></div>
+        <p class="hint">GA4 주요 이벤트(키 이벤트) 기준</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ GA4 ============ -->
+  <section id="ga4" style="display:none">
+    <div class="card" id="gaInsight" style="border-left:4px solid var(--ga4);margin-bottom:14px"></div>
+    <div class="grid kpis" id="gaKpis"></div>
+
+    <div class="card chart-card" style="margin-top:14px">
+      <h3>일별 세션 · 신규사용자 · 전환</h3>
+      <div class="chart-box"><canvas id="gaTrend"></canvas></div>
+    </div>
+
+    <div class="grid three-col" style="margin-top:14px">
+      <div class="card chart-card">
+        <h3>채널 그룹별 세션</h3>
+        <div class="chart-box sm"><canvas id="gaChannel"></canvas></div>
+      </div>
+      <div class="card chart-card">
+        <h3>기기별 세션</h3>
+        <div class="chart-box sm"><canvas id="gaDevice"></canvas></div>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 12px;font-size:14px">채널 그룹 상세</h3>
+        <div class="scroll-x"><table id="gaChannelTable"></table></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h3 style="margin:0 0 8px;font-size:14px">소스 / 매체별 성과 <span class="badge warn">전체 기간</span></h3>
+      <div class="scroll-x"><table id="gaSourceTable"></table></div>
+      <p class="hint">※ 활성 사용자 · 세션 · 참여 세션 · 참여율 · 평균 참여시간 · 전환을 비중과 함께 표시 (구글 시트 [GA4] 형식 참고)</p>
+    </div>
+
+    <div class="grid two-col" style="margin-top:14px">
+      <div class="card">
+        <h3 style="margin:0 0 4px;font-size:14px">주요 이벤트 Top <span class="badge warn">전체 기간</span></h3>
+        <div class="scroll-x"><table id="gaEventTable"></table></div>
+        <p class="hint">전환(주요 이벤트) 후보: 브로슈어 다운로드 · 지원서 제출 · 리드 생성 · 상담 예약 · 지원하기</p>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 4px;font-size:14px">인기 페이지 <span class="badge warn">전체 기간</span></h3>
+        <div class="scroll-x"><table id="gaPageTable"></table></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h3 style="margin:0 0 8px;font-size:14px">코호트 분석 — 주간 신규/재방문 사용자</h3>
+      <div class="scroll-x"><table id="gaCohortTable"></table></div>
+      <p class="hint">선택 기간을 주(일~토) 단위로 집계. 재방문 = 총 사용자 − 신규 사용자. ※ GA4 네이티브 리텐션 코호트(주차별 잔존율)는 별도 API가 필요해 여기서는 주간 신규/재방문 획득 코호트로 표시합니다.</p>
+    </div>
+
+    <div class="grid two-col" style="margin-top:14px">
+      <div class="card chart-card">
+        <h3>유입 이후 경로 탐색 — 랜딩페이지별 세션 <span class="badge warn">전체 기간</span></h3>
+        <div class="chart-box"><canvas id="gaLanding"></canvas></div>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 4px;font-size:14px">랜딩페이지 상세 <span class="badge warn">전체 기간</span></h3>
+        <div class="scroll-x"><table id="gaLandingTable"></table></div>
+        <p class="hint">세션이 시작된(유입된) 첫 페이지 기준 · 전환율 = 전환 / 세션</p>
+      </div>
+    </div>
+
+    <div class="card" id="gaKoreaOnly" style="border-left:4px solid var(--blue);margin-top:14px"></div>
+
+    <div class="grid two-col" style="margin-top:14px">
+      <div class="card chart-card">
+        <h3>국가별 세션 (상위 10) <span class="badge warn" style="font-weight:700">전체 기간</span></h3>
+        <div class="chart-box"><canvas id="gaCountry"></canvas></div>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 4px;font-size:14px">국가별 상세 <span class="badge warn">전체 기간</span></h3>
+        <div class="scroll-x" style="max-height:300px"><table id="gaCountryTable"></table></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h3 style="margin:0 0 8px;font-size:14px">🇰🇷 한국 지역별 세션 <span class="badge warn">전체 기간</span></h3>
+      <div class="scroll-x"><table id="gaKrRegionTable"></table></div>
+      <p class="hint">국가=대한민국 기준 상위 지역(전체 한국 세션의 약 97% 커버). ⚠️ 전체 트래픽엔 해외 유입(인도·방글라데시 등)이 많고, 특히 <b>인도는 세션 1,265 대비 전환 1,027(81%)</b>로 비정상 → 봇/무효 트래픽 의심. GA4 전환 수치 해석 시 주의.</p>
+    </div>
+  </section>
+
+  <div class="foot" id="footNotes"></div>
+</div>
+
+<!-- ============ PASSWORD GATE ============ -->
+<div class="gate" id="gate">
+  <div class="gate-box">
+    <div class="logo">22B</div>
+    <h2>22Brix 통합 마케팅 대시보드</h2>
+    <p>접근하려면 비밀번호를 입력하세요.</p>
+    <input type="password" id="gatePw" placeholder="비밀번호" autocomplete="off" />
+    <div class="gate-err" id="gateErr"></div>
+    <button id="gateBtn">입장</button>
+  </div>
+</div>
+
+<!-- ============ DATE PICKER ============ -->
+<div class="overlay" id="overlay">
+  <div class="picker">
+    <div class="picker-body">
+      <div class="presets" id="presets"></div>
+      <div class="cal-area">
+        <div class="date-inputs">
+          <div class="di act" id="diStart">2026.06.16.</div>
+          <span class="arrow">→</span>
+          <div class="di" id="diEnd">2026.06.22.</div>
+        </div>
+        <div class="weekhead">
+          <span class="sun">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="sat">토</span>
+        </div>
+        <div id="calMonths"></div>
+      </div>
+    </div>
+    <div class="cmp-toggle" style="border-top:none;padding-bottom:0">
+      <label class="switch"><input type="checkbox" id="cmpSwitch"><span class="slider"></span></label>
+      <span>기간 비교</span>
+      <span class="help" title="선택 기간 직전의 동일 길이 기간과 비교하여 증감률을 표시합니다.">?</span>
+      <span class="cmp-note" id="cmpPreview"></span>
+    </div>
+    <div class="picker-foot">
+      <button class="btn" id="btnCancel">취소</button>
+      <button class="btn primary" id="btnApply">확인</button>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script>
+/* ---------------- utils ---------------- */
+const won = n => '₩' + Math.round(n).toLocaleString('ko-KR');
+const num = n => Math.round(n).toLocaleString('ko-KR');
+const pct = (n,d) => d>0 ? (n/d*100) : 0;
+const fmtPct = n => n.toFixed(2) + '%';
+const dur = s => { s=Math.round(s); return s>=60 ? `${Math.floor(s/60)}분 ${s%60}초` : `${s}초`; };
+const pctChg = (cur,prev) => { if(prev===0) return cur>0?'신규':'0%'; const c=(cur-prev)/prev*100; return (c>=0?'▲ ':'▼ ')+Math.abs(c).toFixed(1)+'%'; };
+
+function normDate(s){ // "20260527" or "2026-05-27" -> "2026-05-27"
+  s = String(s);
+  return s.includes('-') ? s : s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8);
+}
+function parseCSV(str, cols, numFrom){
+  return str.trim().split('\n').map(line=>{
+    const p = line.split(',');
+    const o = {};
+    cols.forEach((c,i)=>{ o[c] = (i>=numFrom) ? Number(p[i]) : p[i]; });
+    if(o.date) o.date = normDate(o.date);
+    return o;
+  });
+}
+// date math
+function toD(s){ const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); }
+function toS(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function addDays(s,n){ const d=toD(s); d.setDate(d.getDate()+n); return toS(d); }
+function diffDays(a,b){ return Math.round((toD(b)-toD(a))/86400000); }
+function fmtDot(s){ return s.replace(/-/g,'.'); }
+
+/* ---------------- data ---------------- */
+const D = {
+  naverDaily: parseCSV(NAVER_DAILY, ['date','imp','clk','cost'],1),
+  googleDaily: parseCSV(GOOGLE_DAILY, ['date','imp','clk','cost','conv'],1),
+  ga4Daily: parseCSV(GA4_DAILY, ['date','sessions','users','newUsers','pv','conv','eng'],1),
+  naverCamp: parseCSV(NAVER_CAMP, ['date','camp','imp','clk','cost'],2),
+  googleCamp: parseCSV(GOOGLE_CAMP, ['date','camp','imp','clk','cost','conv'],2),
+  ga4Channel: parseCSV(GA4_CHANNEL, ['date','channel','sessions','users','conv'],2),
+  ga4Device: parseCSV(GA4_DEVICE, ['date','device','sessions','users','conv'],2),
+  sourceTotal: parseCSV(GA4_SOURCE_TOTAL, ['sm','sessions','users','conv','eng'],1),
+  pagesTotal: parseCSV(GA4_PAGES_TOTAL, ['path','pv','sessions'],1),
+  country: parseCSV(GA4_COUNTRY, ['country','kor','sessions','users','conv'],2),
+  krRegion: parseCSV(GA4_KR_REGION, ['region','sessions','users'],1),
+  sourceRich: parseCSV(GA4_SOURCE_RICH, ['sm','desc','au','sessions','eng_s','engRate','dur','conv'],2),
+  events: parseCSV(GA4_EVENTS, ['ev','label','count','users'],2),
+  ga4Eng: parseCSV(GA4_ENG, ['date','engDur'],1),
+  naverConv: parseCSV(NAVER_CONV, ['date','type','method','count'],3),
+  naverConvCamp: parseCSV(NAVER_CONV_CAMP, ['date','camp','conv'],2),
+  ga4ConvType: parseCSV(GA4_CONV_TYPE, ['ev','label','conv'],2),
+  googleConv: parseCSV(GOOGLE_CONV, ['date','act','conv','allConv'],2),
+  googleCampAllConv: parseCSV(GOOGLE_CAMP_ALLCONV, ['date','camp','allConv'],2),
+  landing: parseCSV(GA4_LANDING, ['path','sessions','conv','eng'],1),
+};
+// 구글 전체 전환(all_conversions) 합계 — 기간 필터
+function googleAllConvSum(s,e){ let c=0; D.googleConv.forEach(r=>{ if(inRange(r.date,s,e)) c+=r.allConv; }); return c; }
+// 구글 전환 액션 라벨/카테고리(사용자 표시용)
+const GG_CONV_LABEL = {
+  download_brochure:['브로슈어 다운로드','리드 양식'],
+  generate_lead:['리드 생성','리드 양식'],
+  submit_application:['지원서 제출','리드 양식'],
+  directions:['길찾기','로컬 액션'],
+  other_engagement:['기타 참여','참여']
+};
+function googleConvByAction(s,e){
+  const m={};
+  D.googleConv.forEach(r=>{ if(!inRange(r.date,s,e))return;
+    if(!m[r.act])m[r.act]={conv:0,allConv:0};
+    m[r.act].conv+=r.conv; m[r.act].allConv+=r.allConv; });
+  return m;
+}
+// 네이버 전환 유형 라벨(사용자 지정)
+const NV_CONV_LABEL = { lead:'대행문의 완료', add_to_cart:'무료상담 신청 완료' };
+// 네이버 전환 집계 (기간 필터)
+function naverConvSum(s,e){ let c=0; D.naverConv.forEach(r=>{ if(inRange(r.date,s,e)) c+=r.count; }); return c; }
+function naverConvByType(s,e){
+  const m={};
+  D.naverConv.forEach(r=>{ if(!inRange(r.date,s,e))return;
+    const k=r.type; if(!m[k])m[k]={total:0,direct:0,indirect:0};
+    m[k].total+=r.count; m[k][r.method]+=r.count; });
+  return m;
+}
+
+/* ---------------- state ---------------- */
+const PRESETS = ['오늘','어제','이번주','지난주','최근 7일 (오늘 포함)','최근 7일 (오늘 제외)','이번달','지난달','최근 30일 (오늘 포함)','최근 30일 (오늘 제외)'];
+const TODAY = META.today;
+function presetRange(name){
+  const t = TODAY;
+  const dow = toD(t).getDay(); // 0=Sun
+  switch(name){
+    case '오늘': return [t,t];
+    case '어제': return [addDays(t,-1),addDays(t,-1)];
+    case '이번주': return [addDays(t,-dow), t];
+    case '지난주': { const lastSun=addDays(t,-dow-7); return [lastSun, addDays(lastSun,6)]; }
+    case '최근 7일 (오늘 포함)': return [addDays(t,-6), t];
+    case '최근 7일 (오늘 제외)': return [addDays(t,-7), addDays(t,-1)];
+    case '이번달': return [t.slice(0,8)+'01', t];
+    case '지난달': { const d=toD(t); const first=new Date(d.getFullYear(),d.getMonth()-1,1); const last=new Date(d.getFullYear(),d.getMonth(),0); return [toS(first),toS(last)]; }
+    case '최근 30일 (오늘 포함)': return [addDays(t,-29), t];
+    case '최근 30일 (오늘 제외)': return [addDays(t,-30), addDays(t,-1)];
+  }
+}
+let state = { start:'2026-06-16', end:'2026-06-22', preset:'최근 7일 (오늘 제외)', compare:false };
+// temp state used inside picker
+let tmp = {};
+
+/* ---------------- aggregation ---------------- */
+const inRange = (d,s,e)=> d>=s && d<=e;
+function sumAds(arr,s,e){
+  let imp=0,clk=0,cost=0,conv=0;
+  arr.forEach(r=>{ if(inRange(r.date,s,e)){ imp+=r.imp; clk+=r.clk; cost+=r.cost; conv+=(r.conv||0);} });
+  return {imp,clk,cost,conv};
+}
+const ENG_BY_DATE = Object.fromEntries(D.ga4Eng.map(r=>[r.date,r.engDur]));
+function sumGA(s,e){
+  let o={sessions:0,users:0,newUsers:0,pv:0,conv:0,engW:0,engDur:0};
+  D.ga4Daily.forEach(r=>{ if(inRange(r.date,s,e)){ o.sessions+=r.sessions;o.users+=r.users;o.newUsers+=r.newUsers;o.pv+=r.pv;o.conv+=r.conv;o.engW+=r.eng*r.sessions;o.engDur+=(ENG_BY_DATE[r.date]||0); } });
+  o.eng = o.sessions? o.engW/o.sessions : 0;
+  o.pvPerSession = o.sessions? o.pv/o.sessions : 0;
+  o.engPerSession = o.sessions? o.engDur/o.sessions : 0;
+  return o;
+}
+function groupBy(arr,key,s,e,metrics){
+  const m={};
+  arr.forEach(r=>{ if(!inRange(r.date,s,e))return; const k=r[key]; if(!m[k])m[k]={};
+    metrics.forEach(mt=> m[k][mt]=(m[k][mt]||0)+(r[mt]||0)); });
+  return m;
+}
+function deltaHTML(cur,prev){
+  if(!state.compare) return '';
+  if(prev===0 && cur===0) return '<div class="delta flat">– 0%</div>';
+  if(prev===0) return '<div class="delta pos">▲ 신규</div>';
+  const ch=(cur-prev)/prev*100;
+  const cls= ch>0.05?'pos':(ch<-0.05?'neg':'flat');
+  const ar= ch>0.05?'▲':(ch<-0.05?'▼':'–');
+  return `<div class="delta ${cls}">${ar} ${Math.abs(ch).toFixed(1)}%</div>`;
+}
+
+/* ---------------- KPI cards ---------------- */
+function kpiCard(lab,val,sub,cur,prev,dotColor){
+  const d = dotColor?`<span class="dot" style="background:${dotColor}"></span>`:'';
+  return `<div class="card kpi"><div class="lab">${d}${lab}</div><div class="val">${val}</div>
+    ${sub?`<div class="sub">${sub}</div>`:''}${deltaHTML(cur,prev)}</div>`;
+}
+
+function renderOverview(s,e,ps,pe){
+  const nv=sumAds(D.naverDaily,s,e), gg=sumAds(D.googleDaily,s,e), ga=sumGA(s,e);
+  nv.conv=naverConvSum(s,e); gg.conv=googleAllConvSum(s,e);   // 구글=전체 전환 기준
+  const tCost=nv.cost+gg.cost, tImp=nv.imp+gg.imp, tClk=nv.clk+gg.clk;
+  const pnv=sumAds(D.naverDaily,ps,pe), pgg=sumAds(D.googleDaily,ps,pe), pga=sumGA(ps,pe);
+  pnv.conv=naverConvSum(ps,pe); pgg.conv=googleAllConvSum(ps,pe);
+  const ptCost=pnv.cost+pgg.cost, ptImp=pnv.imp+pgg.imp, ptClk=pnv.clk+pgg.clk;
+  const ctr=pct(tClk,tImp), cpc= tClk? tCost/tClk:0;
+  const pctr=pct(ptClk,ptImp), pcpc= ptClk? ptCost/ptClk:0;
+  document.getElementById('ovKpis').innerHTML =
+    kpiCard('총 광고비', won(tCost), '네이버+구글', tCost, ptCost) +
+    kpiCard('총 노출수', num(tImp), '', tImp, ptImp) +
+    kpiCard('총 클릭수', num(tClk), '', tClk, ptClk) +
+    kpiCard('평균 CTR', fmtPct(ctr), '', ctr, pctr) +
+    kpiCard('평균 CPC', won(cpc), '', cpc, pcpc) +
+    kpiCard('광고 전환', num(nv.conv+gg.conv), `네이버 ${num(nv.conv)} + 구글 ${num(gg.conv)}`, nv.conv+gg.conv, pnv.conv+pgg.conv) +
+    kpiCard('GA4 세션', num(ga.sessions), '', ga.sessions, pga.sessions, 'var(--ga4)') +
+    kpiCard('클릭당 세션', (tClk?ga.sessions/tClk:0).toFixed(2), '세션 / 광고클릭', (tClk?ga.sessions/tClk:0), (ptClk?pga.sessions/ptClk:0), 'var(--ga4)') +
+    kpiCard('GA4 전환', num(ga.conv), '이벤트 기반', ga.conv, pga.conv, 'var(--ga4)');
+
+  // channel table
+  const rows=[
+    ['네이버 광고', nv, 'tag-naver'],
+    ['구글 광고', gg, 'tag-google'],
+  ];
+  let html='<thead><tr><th>채널</th><th>광고비</th><th>노출</th><th>클릭</th><th>CTR</th><th>CPC</th><th>전환</th><th>비용 비중</th></tr></thead><tbody>';
+  rows.forEach(([nm,o,tg])=>{
+    html+=`<tr><td class="name"><span class="chan-tag ${tg}">${nm.includes('네이버')?'N':'G'}</span>${nm}</td>
+      <td>${won(o.cost)}</td><td>${num(o.imp)}</td><td>${num(o.clk)}</td>
+      <td>${fmtPct(pct(o.clk,o.imp))}</td><td>${won(o.clk?o.cost/o.clk:0)}</td><td>${num(o.conv||0)}</td>
+      <td>${fmtPct(pct(o.cost,tCost))}</td></tr>`;
+  });
+  html+=`<tr style="font-weight:800;background:#fafbfd"><td>합계</td><td>${won(tCost)}</td><td>${num(tImp)}</td><td>${num(tClk)}</td>
+    <td>${fmtPct(ctr)}</td><td>${won(cpc)}</td><td>${num(nv.conv+gg.conv)}</td><td>100.0%</td></tr></tbody>`;
+  document.getElementById('ovChannelTable').innerHTML=html;
+
+  // charts
+  const days=[]; for(let d=s; d<=e; d=addDays(d,1)) days.push(d);
+  const nMap=Object.fromEntries(D.naverDaily.map(r=>[r.date,r]));
+  const gMap=Object.fromEntries(D.googleDaily.map(r=>[r.date,r]));
+  const gaMap=Object.fromEntries(D.ga4Daily.map(r=>[r.date,r]));
+  const labels=days.map(d=>d.slice(5));
+  drawChart('ovTrend',{type:'bar',data:{labels,datasets:[
+    {label:'네이버',data:days.map(d=>nMap[d]?.cost||0),backgroundColor:'#03c75a',stack:'c'},
+    {label:'구글',data:days.map(d=>gMap[d]?.cost||0),backgroundColor:'#4285f4',stack:'c'}
+  ]},options:stackedWon()});
+  drawChart('ovMix',{type:'doughnut',data:{labels:['네이버','구글'],datasets:[{data:[nv.cost,gg.cost],backgroundColor:['#03c75a','#4285f4'],borderWidth:2,borderColor:'#fff'}]},options:donutOpt(true)});
+  drawChart('ovClickSession',{type:'line',data:{labels,datasets:[
+    {label:'광고 클릭',data:days.map(d=>(nMap[d]?.clk||0)+(gMap[d]?.clk||0)),borderColor:'#1a73e8',backgroundColor:'#1a73e8',tension:.3,yAxisID:'y'},
+    {label:'GA4 세션',data:days.map(d=>gaMap[d]?.sessions||0),borderColor:'#f9ab00',backgroundColor:'#f9ab00',tension:.3,yAxisID:'y'}
+  ]},options:lineOpt()});
+}
+
+function renderAds(s,e,ps,pe){
+  const nv=sumAds(D.naverDaily,s,e), gg=sumAds(D.googleDaily,s,e);
+  nv.conv=naverConvSum(s,e);
+  const ggPrimary=gg.conv;            // 주요 전환(generate_lead)
+  gg.conv=googleAllConvSum(s,e);      // 카드 기준 = 전체 전환
+  const pnv=sumAds(D.naverDaily,ps,pe), pgg=sumAds(D.googleDaily,ps,pe);
+  pnv.conv=naverConvSum(ps,pe); const pggAll=googleAllConvSum(ps,pe);
+  document.getElementById('adKpis').innerHTML =
+    kpiCard('네이버 광고비', won(nv.cost),'',nv.cost,pnv.cost,'var(--naver)') +
+    kpiCard('네이버 클릭', num(nv.clk),`CTR ${fmtPct(pct(nv.clk,nv.imp))}`,nv.clk,pnv.clk,'var(--naver)') +
+    kpiCard('네이버 전환', num(nv.conv),'대행문의+무료상담',nv.conv,pnv.conv,'var(--naver)') +
+    kpiCard('구글 광고비', won(gg.cost),'',gg.cost,pgg.cost,'var(--gad)') +
+    kpiCard('구글 클릭', num(gg.clk),`CTR ${fmtPct(pct(gg.clk,gg.imp))}`,gg.clk,pgg.clk,'var(--gad)') +
+    kpiCard('구글 전환', num(gg.conv),`전체 전환 · 주요 ${num(ggPrimary)}`,gg.conv,pggAll,'var(--gad)');
+
+  const days=[]; for(let d=s; d<=e; d=addDays(d,1)) days.push(d);
+  const nMap=Object.fromEntries(D.naverDaily.map(r=>[r.date,r]));
+  const gMap=Object.fromEntries(D.googleDaily.map(r=>[r.date,r]));
+  const labels=days.map(d=>d.slice(5));
+  drawChart('adCost',{type:'line',data:{labels,datasets:[
+    {label:'네이버',data:days.map(d=>nMap[d]?.cost||0),borderColor:'#03c75a',backgroundColor:'rgba(3,199,90,.12)',fill:true,tension:.3},
+    {label:'구글',data:days.map(d=>gMap[d]?.cost||0),borderColor:'#4285f4',backgroundColor:'rgba(66,133,244,.12)',fill:true,tension:.3}
+  ]},options:lineOpt(true)});
+  drawChart('adImpClick',{type:'bar',data:{labels,datasets:[
+    {label:'노출(네이버+구글)',data:days.map(d=>(nMap[d]?.imp||0)+(gMap[d]?.imp||0)),backgroundColor:'#c3d4f5',yAxisID:'y'},
+    {label:'클릭(네이버+구글)',type:'line',data:days.map(d=>(nMap[d]?.clk||0)+(gMap[d]?.clk||0)),borderColor:'#1a73e8',backgroundColor:'#1a73e8',tension:.3,yAxisID:'y1'}
+  ]},options:dualAxis()});
+
+  // campaign table (merge)
+  const camps=[];
+  const ng=groupBy(D.naverCamp,'camp',s,e,['imp','clk','cost']);
+  const ncv=groupBy(D.naverConvCamp,'camp',s,e,['conv']);
+  Object.entries(ng).forEach(([k,v])=>camps.push({ch:'naver',name:k,...v,conv:(ncv[k]?ncv[k].conv:0)}));
+  const gj=groupBy(D.googleCamp,'camp',s,e,['imp','clk','cost']);
+  const gac=groupBy(D.googleCampAllConv,'camp',s,e,['allConv']);
+  Object.entries(gj).forEach(([k,v])=>camps.push({ch:'google',name:k,imp:v.imp,clk:v.clk,cost:v.cost,conv:(gac[k]?gac[k].allConv:0)}));
+  camps.sort((a,b)=>b.cost-a.cost);
+  document.getElementById('campCount').textContent = camps.length+'개';
+  if(!camps.length){ document.getElementById('campTable').innerHTML='<tbody><tr><td class="nodata">선택 기간에 캠페인 데이터가 없습니다.</td></tr></tbody>'; return; }
+  let html='<thead><tr><th>캠페인</th><th>광고비</th><th>노출</th><th>클릭</th><th>CTR</th><th>CPC</th><th>전환</th></tr></thead><tbody>';
+  camps.forEach(c=>{
+    html+=`<tr><td class="name"><span class="chan-tag ${c.ch==='naver'?'tag-naver':'tag-google'}">${c.ch==='naver'?'N':'G'}</span>${c.name}</td>
+      <td>${won(c.cost)}</td><td>${num(c.imp)}</td><td>${num(c.clk)}</td>
+      <td>${fmtPct(pct(c.clk,c.imp))}</td><td>${won(c.clk?c.cost/c.clk:0)}</td><td>${num(c.conv||0)}</td></tr>`;
+  });
+  html+='</tbody>';
+  document.getElementById('campTable').innerHTML=html;
+
+  // ----- 전환 상세 (종류별) -----
+  // 네이버: 유형 × 직접/간접
+  const nvByType=naverConvByType(s,e);
+  const nvKeys=Object.keys(nvByType).sort((a,b)=>nvByType[b].total-nvByType[a].total);
+  let nt='<thead><tr><th>전환 유형</th><th>총 전환</th><th>직접</th><th>간접</th></tr></thead><tbody>';
+  if(!nvKeys.length){ nt+='<tr><td class="nodata" colspan="4">선택 기간 전환 없음</td></tr>'; }
+  else {
+    let tT=0,tD=0,tI=0;
+    nvKeys.forEach(k=>{ const v=nvByType[k]; tT+=v.total;tD+=v.direct;tI+=v.indirect;
+      nt+=`<tr><td class="name">${NV_CONV_LABEL[k]||k} <span style="color:var(--muted);font-size:11px">(${k})</span></td><td>${num(v.total)}</td><td>${num(v.direct)}</td><td>${num(v.indirect)}</td></tr>`; });
+    nt+=`<tr style="font-weight:800;background:#fafbfd"><td>합계</td><td>${num(tT)}</td><td>${num(tD)}</td><td>${num(tI)}</td></tr>`;
+  }
+  nt+='</tbody>'; document.getElementById('nvConvTable').innerHTML=nt;
+
+  // 구글: 전환 액션별 (주요 전환 vs 전체 전환)
+  const ggByAct=googleConvByAction(s,e);
+  const ggKeys=Object.keys(ggByAct).sort((a,b)=>ggByAct[b].allConv-ggByAct[a].allConv);
+  let gt='<thead><tr><th>전환 액션</th><th>카테고리</th><th>주요 전환</th><th>전체 전환</th></tr></thead><tbody>';
+  if(!ggKeys.length){ gt+='<tr><td class="nodata" colspan="4">선택 기간 전환 없음</td></tr>'; }
+  else {
+    let tC=0,tA=0;
+    ggKeys.forEach(k=>{ const v=ggByAct[k]; const lab=GG_CONV_LABEL[k]||[k,'']; tC+=v.conv; tA+=v.allConv;
+      gt+=`<tr><td class="name">${lab[0]} <span style="color:var(--muted);font-size:11px">(${k})</span></td><td style="color:var(--muted)">${lab[1]}</td><td>${num(v.conv)}</td><td>${num(v.allConv)}</td></tr>`; });
+    gt+=`<tr style="font-weight:800;background:#fafbfd"><td>합계</td><td></td><td>${num(tC)}</td><td>${num(tA)}</td></tr>`;
+  }
+  gt+='</tbody>'; document.getElementById('ggConvTable').innerHTML=gt;
+
+  // GA4: 이벤트별 (전체 기간)
+  let g4='<thead><tr><th>전환 이벤트</th><th>전환수</th><th>비중</th></tr></thead><tbody>';
+  const g4tot=D.ga4ConvType.reduce((a,r)=>a+r.conv,0)||1;
+  D.ga4ConvType.forEach(r=> g4+=`<tr><td class="name">${r.label} <span style="color:var(--muted);font-size:11px">(${r.ev})</span></td><td>${num(r.conv)}</td><td>${fmtPct(r.conv/g4tot*100)}</td></tr>`);
+  g4+=`<tr style="font-weight:800;background:#fafbfd"><td>합계</td><td>${num(g4tot)}</td><td>100.0%</td></tr></tbody>`;
+  document.getElementById('ga4ConvTable').innerHTML=g4;
+}
+
+const CH_COLORS={'Cross-network':'#34a853','Paid Search':'#4285f4','Organic Search':'#fbbc04','Direct':'#9aa0a6','Referral':'#34c5e8','Unassigned':'#dadce0','Organic Social':'#ab47bc','AI Assistant':'#ff7043'};
+const DEV_COLORS={mobile:'#1a73e8',desktop:'#34a853',tablet:'#fbbc04'};
+
+function renderGA4(s,e,ps,pe){
+  const ga=sumGA(s,e), pga=sumGA(ps,pe);
+  const nur=ga.users?ga.newUsers/ga.users:0, pnur=pga.users?pga.newUsers/pga.users:0;
+  const gcr=ga.sessions?ga.conv/ga.sessions:0, pgcr=pga.sessions?pga.conv/pga.sessions:0;
+  document.getElementById('gaKpis').innerHTML =
+    kpiCard('세션', num(ga.sessions),'',ga.sessions,pga.sessions,'var(--ga4)') +
+    kpiCard('총 사용자', num(ga.users),'',ga.users,pga.users,'var(--ga4)') +
+    kpiCard('신규 사용자', num(ga.newUsers),'',ga.newUsers,pga.newUsers,'var(--ga4)') +
+    kpiCard('신규 사용자 비율', fmtPct(nur*100),'신규 / 총 사용자',nur,pnur,'var(--ga4)') +
+    kpiCard('페이지뷰', num(ga.pv),'',ga.pv,pga.pv,'var(--ga4)') +
+    kpiCard('세션당 페이지뷰', ga.pvPerSession.toFixed(2),'페이지뷰 / 세션',ga.pvPerSession,pga.pvPerSession,'var(--ga4)') +
+    kpiCard('전환', num(ga.conv),'이벤트 기반',ga.conv,pga.conv,'var(--ga4)') +
+    kpiCard('GA4 전환율', fmtPct(gcr*100),'전환 / 세션',gcr,pgcr,'var(--ga4)') +
+    kpiCard('참여율', fmtPct(ga.eng*100),'',ga.eng,pga.eng,'var(--ga4)') +
+    kpiCard('세션당 참여시간', dur(ga.engPerSession),'참여시간 / 세션',ga.engPerSession,pga.engPerSession,'var(--ga4)');
+
+  const days=[]; for(let d=s; d<=e; d=addDays(d,1)) days.push(d);
+  const gaMap=Object.fromEntries(D.ga4Daily.map(r=>[r.date,r]));
+  const labels=days.map(d=>d.slice(5));
+  drawChart('gaTrend',{type:'line',data:{labels,datasets:[
+    {label:'세션',data:days.map(d=>gaMap[d]?.sessions||0),borderColor:'#1a73e8',backgroundColor:'rgba(26,115,232,.10)',fill:true,tension:.3,yAxisID:'y'},
+    {label:'신규 사용자',data:days.map(d=>gaMap[d]?.newUsers||0),borderColor:'#34a853',backgroundColor:'#34a853',tension:.3,yAxisID:'y'},
+    {label:'전환',data:days.map(d=>gaMap[d]?.conv||0),borderColor:'#f9ab00',backgroundColor:'#f9ab00',tension:.3,yAxisID:'y1'}
+  ]},options:dualAxis()});
+
+  // channel
+  const chg=groupBy(D.ga4Channel,'channel',s,e,['sessions','users','conv']);
+  const chArr=Object.entries(chg).map(([k,v])=>({k,...v})).sort((a,b)=>b.sessions-a.sessions);
+  drawChart('gaChannel',{type:'doughnut',data:{labels:chArr.map(c=>c.k),datasets:[{data:chArr.map(c=>c.sessions),backgroundColor:chArr.map(c=>CH_COLORS[c.k]||'#bbb'),borderWidth:2,borderColor:'#fff'}]},options:donutOpt()});
+  let cht='<thead><tr><th>채널 그룹</th><th>세션</th><th>사용자</th><th>전환</th></tr></thead><tbody>';
+  chArr.forEach(c=> cht+=`<tr><td class="name"><span class="dot" style="background:${CH_COLORS[c.k]||'#bbb'};margin-right:6px"></span>${c.k}</td><td>${num(c.sessions)}</td><td>${num(c.users)}</td><td>${num(c.conv)}</td></tr>`);
+  cht+='</tbody>'; document.getElementById('gaChannelTable').innerHTML = chArr.length?cht:'<tbody><tr><td class="nodata">데이터 없음</td></tr></tbody>';
+
+  // device
+  const dvg=groupBy(D.ga4Device,'device',s,e,['sessions','users','conv']);
+  const dvArr=Object.entries(dvg).map(([k,v])=>({k,...v})).sort((a,b)=>b.sessions-a.sessions);
+  drawChart('gaDevice',{type:'doughnut',data:{labels:dvArr.map(c=>c.k),datasets:[{data:dvArr.map(c=>c.sessions),backgroundColor:dvArr.map(c=>DEV_COLORS[c.k]||'#bbb'),borderWidth:2,borderColor:'#fff'}]},options:donutOpt(true)});
+
+  // ----- 인사이트 요약 (시트 [GA4] ">" 코멘트 형식 참고) -----
+  const topCh = chArr[0];
+  const totSess = chArr.reduce((a,c)=>a+c.sessions,0) || 1;
+  const richConvSorted=[...D.sourceRich].sort((a,b)=>b.conv-a.conv);
+  const richEngSorted=[...D.sourceRich].filter(r=>r.sessions>=30 && !r.sm.startsWith('(')).sort((a,b)=>b.engRate-a.engRate);
+  const topConv=richConvSorted[0], topEng=richEngSorted[0];
+  const cmpTxt = state.compare
+    ? ` (직전 기간 대비 세션 ${pctChg(ga.sessions,pga.sessions)}, 전환 ${pctChg(ga.conv,pga.conv)})` : '';
+  document.getElementById('gaInsight').innerHTML =
+    `<b style="color:var(--ga4)">📌 GA4 핵심 요약</b> <span style="color:var(--muted);font-size:12px">· ${fmtDot(s)} ~ ${fmtDot(e)}</span>
+     <div style="margin-top:8px;line-height:1.9;font-size:13px">
+     › 선택 기간 <b>세션 ${num(ga.sessions)}</b> · 사용자 ${num(ga.users)} · <b>전환 ${num(ga.conv)}</b> · 참여율 ${fmtPct(ga.eng*100)}${cmpTxt}<br>
+     › 유입 1위 채널: <b>${topCh?topCh.k:'-'}</b> ${topCh?`(세션 비중 ${fmtPct(topCh.sessions/totSess*100)})`:''}<br>
+     › 전환 기여 1위 소스: <b>${topConv.sm}</b> <span style="color:var(--muted)">(${topConv.desc})</span> — 전체 기간 전환 ${num(topConv.conv)}건<br>
+     › 참여율 최상위 소스: <b>${topEng.sm}</b> <span style="color:var(--muted)">(${topEng.desc})</span> — ${fmtPct(topEng.engRate*100)}, 평균 참여 ${dur(topEng.dur)}<br>
+     <span style="color:var(--muted);font-size:11.5px">※ 소스/매체·이벤트·페이지·지역 지표는 전체 기간(${META.rangeStart}~${META.rangeEnd}) 기준</span>
+     </div>`;
+
+  // ----- 소스/매체별 성과 (rich, 전체 기간) -----
+  const sTotAU=D.sourceRich.reduce((a,r)=>a+r.au,0), sTotS=D.sourceRich.reduce((a,r)=>a+r.sessions,0), sTotC=D.sourceRich.reduce((a,r)=>a+r.conv,0);
+  let st='<thead><tr><th>소스 / 매체</th><th>설명</th><th>활성 사용자</th><th>세션</th><th>참여 세션</th><th>참여율</th><th>평균 참여시간</th><th>전환</th></tr></thead><tbody>';
+  st+=`<tr style="font-weight:800;background:#fafbfd"><td>총계</td><td></td><td>${num(sTotAU)}</td><td>${num(sTotS)}</td><td>${num(D.sourceRich.reduce((a,r)=>a+r.eng_s,0))}</td><td>—</td><td>—</td><td>${num(sTotC)}</td></tr>`;
+  D.sourceRich.forEach(r=>{
+    st+=`<tr><td class="name">${r.sm}</td><td style="color:var(--muted)">${r.desc}</td>
+      <td>${num(r.au)} <span style="color:var(--muted);font-size:11px">${fmtPct(pct(r.au,sTotAU))}</span></td>
+      <td>${num(r.sessions)} <span style="color:var(--muted);font-size:11px">${fmtPct(pct(r.sessions,sTotS))}</span></td>
+      <td>${num(r.eng_s)}</td><td>${fmtPct(r.engRate*100)}</td><td>${dur(r.dur)}</td>
+      <td>${num(r.conv)} <span style="color:var(--muted);font-size:11px">${fmtPct(pct(r.conv,sTotC))}</span></td></tr>`;
+  });
+  st+='</tbody>'; document.getElementById('gaSourceTable').innerHTML=st;
+
+  // ----- 주요 이벤트 Top (전체 기간) -----
+  const evTot=D.events.reduce((a,r)=>a+r.count,0)||1;
+  let et='<thead><tr><th>이벤트</th><th>설명</th><th>이벤트 수</th><th>사용자</th><th>비중</th></tr></thead><tbody>';
+  D.events.forEach(r=> et+=`<tr><td class="name">${r.ev}</td><td style="color:var(--muted)">${r.label}</td><td>${num(r.count)}</td><td>${num(r.users)}</td><td>${fmtPct(r.count/evTot*100)}</td></tr>`);
+  et+='</tbody>'; document.getElementById('gaEventTable').innerHTML=et;
+
+  let pt='<thead><tr><th>페이지</th><th>페이지뷰</th><th>세션</th></tr></thead><tbody>';
+  D.pagesTotal.forEach(r=> pt+=`<tr><td class="name">${r.path}</td><td>${num(r.pv)}</td><td>${num(r.sessions)}</td></tr>`);
+  pt+='</tbody>'; document.getElementById('gaPageTable').innerHTML=pt;
+
+  // 국가별 (전체 기간) — 한국 강조, 비정상 전환율 경고
+  const ctry=[...D.country].sort((a,b)=>b.sessions-a.sessions);
+  const ctop=ctry.slice(0,10);
+  drawChart('gaCountry',{type:'bar',data:{labels:ctop.map(r=>r.kor),datasets:[{label:'세션',
+    data:ctop.map(r=>r.sessions),
+    backgroundColor:ctop.map(r=>r.country==='South Korea'?'#1a73e8':'#c3d4f5'),borderRadius:4}]},options:hbarOpt()});
+  let rt='<thead><tr><th>국가</th><th>세션</th><th>사용자</th><th>전환</th><th>전환율</th></tr></thead><tbody>';
+  ctry.forEach(r=>{ const cr=pct(r.conv,r.sessions); const flag=cr>50;
+    rt+=`<tr><td class="name">${r.kor} <span style="color:var(--muted);font-size:11px">${r.country}</span></td>
+      <td>${num(r.sessions)}</td><td>${num(r.users)}</td><td>${num(r.conv)}</td>
+      <td style="${flag?'color:var(--neg);font-weight:700':''}">${fmtPct(cr)}${flag?' ⚠️':''}</td></tr>`; });
+  rt+='</tbody>'; document.getElementById('gaCountryTable').innerHTML=rt;
+
+  // 🇰🇷 한국 only GA4 지표 (전체 기간)
+  const kr=D.country.find(c=>c.country==='South Korea')||{sessions:0,users:0,conv:0};
+  const totS=D.ga4Daily.reduce((a,r)=>a+r.sessions,0);
+  const totU=D.ga4Daily.reduce((a,r)=>a+r.users,0);
+  const totC=D.ga4Daily.reduce((a,r)=>a+r.conv,0);
+  const statBox=(lab,val,sub)=>`<div style="min-width:120px"><div style="color:var(--muted);font-size:12px;font-weight:600">${lab}</div><div style="font-size:23px;font-weight:800;margin-top:5px">${val}</div><div style="font-size:11.5px;color:var(--muted);margin-top:2px">${sub}</div></div>`;
+  document.getElementById('gaKoreaOnly').innerHTML =
+    `<b style="color:var(--blue)">🇰🇷 한국 only GA4 지표</b> <span class="badge warn">전체 기간</span>
+     <div style="display:flex;gap:30px;flex-wrap:wrap;margin-top:12px">
+       ${statBox('한국 세션', num(kr.sessions), `전체의 ${fmtPct(pct(kr.sessions,totS))}`)}
+       ${statBox('한국 사용자', num(kr.users), '전체 기간 순 사용자')}
+       ${statBox('한국 전환', num(kr.conv), `전체의 ${fmtPct(pct(kr.conv,totC))}`)}
+       ${statBox('한국 전환율', fmtPct(pct(kr.conv,kr.sessions)), '전환 / 세션')}
+     </div>
+     <p class="hint">전체 GA4 전환 ${num(totC)}건 중 <b>한국은 ${num(kr.conv)}건(${fmtPct(pct(kr.conv,totC))})</b>뿐 — 나머지는 해외(인도 등 봇 의심) 유입에서 발생. 광고/사이트 실질 성과는 이 한국 기준으로 보는 것을 권장합니다. ※ 국가 데이터는 전체 기간 고정(날짜 필터 미적용).</p>`;
+
+  // 한국 지역별 (전체 기간)
+  const krTot=D.krRegion.reduce((a,r)=>a+r.sessions,0)||1;
+  let kt='<thead><tr><th>지역</th><th>세션</th><th>사용자</th><th>비중(한국 내)</th></tr></thead><tbody>';
+  D.krRegion.forEach(r=> kt+=`<tr><td class="name">${r.region}</td><td>${num(r.sessions)}</td><td>${num(r.users)}</td><td>${fmtPct(r.sessions/krTot*100)}</td></tr>`);
+  kt+='</tbody>'; document.getElementById('gaKrRegionTable').innerHTML=kt;
+
+  // ----- 코호트: 주간 신규/재방문 (선택 기간) -----
+  const wk={};
+  D.ga4Daily.forEach(r=>{ if(!inRange(r.date,s,e))return;
+    const ws=addDays(r.date,-toD(r.date).getDay()); // 일요일 시작
+    if(!wk[ws])wk[ws]={users:0,nu:0,sessions:0,conv:0};
+    wk[ws].users+=r.users; wk[ws].nu+=r.newUsers; wk[ws].sessions+=r.sessions; wk[ws].conv+=r.conv; });
+  const wkeys=Object.keys(wk).sort();
+  let ct='<thead><tr><th>주 시작(일)</th><th>총 사용자</th><th>신규</th><th>재방문</th><th>재방문율</th><th>세션</th><th>전환</th></tr></thead><tbody>';
+  if(!wkeys.length){ ct+='<tr><td class="nodata" colspan="7">선택 기간 데이터 없음</td></tr>'; }
+  else wkeys.forEach(w=>{ const v=wk[w]; const ret=Math.max(0,v.users-v.nu);
+    ct+=`<tr><td class="name">${fmtDot(w)} ~</td><td>${num(v.users)}</td><td>${num(v.nu)}</td><td>${num(ret)}</td><td>${fmtPct(pct(ret,v.users))}</td><td>${num(v.sessions)}</td><td>${num(v.conv)}</td></tr>`; });
+  ct+='</tbody>'; document.getElementById('gaCohortTable').innerHTML=ct;
+
+  // ----- 유입 이후 경로 탐색: 랜딩페이지 (전체 기간) -----
+  const lp=[...D.landing].sort((a,b)=>b.sessions-a.sessions).slice(0,10);
+  drawChart('gaLanding',{type:'bar',data:{labels:lp.map(r=>r.path),datasets:[{label:'세션',data:lp.map(r=>r.sessions),backgroundColor:'#34a853',borderRadius:4}]},options:hbarOpt()});
+  let lt='<thead><tr><th>랜딩페이지</th><th>세션</th><th>전환</th><th>전환율</th><th>참여율</th></tr></thead><tbody>';
+  D.landing.forEach(r=> lt+=`<tr><td class="name">${r.path}</td><td>${num(r.sessions)}</td><td>${num(r.conv)}</td><td>${fmtPct(pct(r.conv,r.sessions))}</td><td>${fmtPct(r.eng*100)}</td></tr>`);
+  lt+='</tbody>'; document.getElementById('gaLandingTable').innerHTML=lt;
+}
+
+/* ---------------- chart helpers ---------------- */
+const charts={};
+function drawChart(id,cfg){
+  try{
+    if(typeof Chart==='undefined') throw new Error('Chart.js 미로드');
+    if(charts[id])charts[id].destroy();
+    charts[id]=new Chart(document.getElementById(id),cfg);
+  }catch(e){
+    const cv=document.getElementById(id);
+    if(cv&&cv.parentElement) cv.parentElement.innerHTML=
+      '<div class="nodata">차트를 불러오지 못했습니다.<br><small>인터넷 연결(Chart.js CDN)을 확인하세요.</small></div>';
+    console.error('chart '+id,e);
+  }
+}
+Chart.defaults.font.family="'Pretendard','Apple SD Gothic Neo',sans-serif";
+Chart.defaults.color='#6b7280';
+Chart.defaults.animation=false;            // 무한 리페인트 방지
+Chart.defaults.responsiveAnimationDuration=0;
+Chart.defaults.resizeDelay=120;            // 리사이즈 디바운스
+Chart.defaults.devicePixelRatio=Math.min(window.devicePixelRatio||1,1.5);
+const wonTick = v=> v>=10000? (v/10000).toFixed(0)+'만' : num(v);
+function baseScales(){return {x:{grid:{display:false}},y:{grid:{color:'#f0f2f6'},ticks:{callback:v=>num(v)}}};}
+function stackedWon(){return {responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},
+  scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,grid:{color:'#f0f2f6'},ticks:{callback:wonTick}}}};}
+function lineOpt(isWon){return {responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+  plugins:{legend:{position:'bottom'}},scales:{x:{grid:{display:false}},y:{grid:{color:'#f0f2f6'},ticks:{callback:isWon?wonTick:(v=>num(v))}}}};}
+function dualAxis(){return {responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+  plugins:{legend:{position:'bottom'}},scales:{x:{grid:{display:false}},
+  y:{position:'left',grid:{color:'#f0f2f6'},ticks:{callback:v=>num(v)}},
+  y1:{position:'right',grid:{display:false},ticks:{callback:v=>num(v)}}}};}
+function donutOpt(showWon){return {responsive:true,maintainAspectRatio:false,cutout:'62%',
+  plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>{
+    const tot=c.dataset.data.reduce((a,b)=>a+b,0); const v=c.parsed;
+    return `${c.label}: ${showWon?won(v):num(v)} (${(v/tot*100).toFixed(1)}%)`;}}}}};}
+function hbarOpt(){return {indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+  scales:{x:{grid:{color:'#f0f2f6'},ticks:{callback:v=>num(v)}},y:{grid:{display:false}}}};}
+
+/* ---------------- main render ---------------- */
+function render(){
+  const {start:s,end:e}=state;
+  let ps,pe;
+  if(state.compare){ const len=diffDays(s,e)+1; pe=addDays(s,-1); ps=addDays(pe,-(len-1)); }
+  else { ps=pe='0000-00-00'; }
+  // banner
+  const cb=document.getElementById('cmpBanner');
+  if(state.compare){ cb.style.display='block'; document.getElementById('cmpBannerTxt').textContent=` 현재 ${fmtDot(s)}~${fmtDot(e)} vs 직전 ${fmtDot(ps)}~${fmtDot(pe)} (증감률은 KPI 카드에 표시)`; }
+  else cb.style.display='none';
+
+  try{ renderOverview(s,e,ps,pe); }catch(e){ console.error('overview',e); }
+  try{ renderAds(s,e,ps,pe); }catch(e){ console.error('ads',e); }
+  try{ renderGA4(s,e,ps,pe); }catch(e){ console.error('ga4',e); }
+  // header label
+  document.getElementById('rangeLabel').textContent = state.preset || '사용자 지정';
+  document.getElementById('rangeDates').textContent = `${fmtDot(s)} ~ ${fmtDot(e)}`;
+}
+
+/* ---------------- tabs ---------------- */
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  ['overview','ads','ga4'].forEach(id=> document.getElementById(id).style.display='none');
+  document.getElementById(t.dataset.tab).style.display='block';
+}));
+
+/* ---------------- date picker ---------------- */
+const CAL_MIN='2026-03-01', CAL_MAX=TODAY;
+function buildPresets(){
+  const box=document.getElementById('presets'); box.innerHTML='';
+  PRESETS.forEach(p=>{
+    const el=document.createElement('div'); el.className='preset'+(tmp.preset===p?' active':''); el.textContent=p;
+    el.onclick=()=>{ const [s,e]=presetRange(p); tmp.start=s; tmp.end=e; tmp.preset=p; tmp.pickStage=0; refreshPicker(); };
+    box.appendChild(el);
+  });
+}
+function buildCalendar(){
+  const box=document.getElementById('calMonths'); box.innerHTML='';
+  let cur=toD(CAL_MIN.slice(0,8)+'01');
+  const endM=toD(CAL_MAX.slice(0,8)+'01');
+  while(cur<=endM){
+    const y=cur.getFullYear(), m=cur.getMonth();
+    const monthDiv=document.createElement('div'); monthDiv.className='month';
+    monthDiv.innerHTML=`<div class="mlabel">${y}년 ${m+1}월</div>`;
+    const days=document.createElement('div'); days.className='days';
+    const first=new Date(y,m,1).getDay();
+    for(let i=0;i<first;i++){ const x=document.createElement('div'); x.className='day empty'; days.appendChild(x); }
+    const dim=new Date(y,m+1,0).getDate();
+    for(let dd=1;dd<=dim;dd++){
+      const ds=toS(new Date(y,m,dd));
+      const el=document.createElement('div'); el.className='day'; el.textContent=dd; el.dataset.d=ds;
+      if(ds<CAL_MIN||ds>CAL_MAX){ el.classList.add('disabled'); }
+      else el.onclick=()=>pickDay(ds);
+      days.appendChild(el);
+    }
+    monthDiv.appendChild(days); box.appendChild(monthDiv);
+    cur=new Date(y,m+1,1);
+  }
+}
+function pickDay(ds){
+  if(tmp.pickStage===0 || !tmp.start){ tmp.start=ds; tmp.end=ds; tmp.pickStage=1; tmp.preset=null; }
+  else { if(ds<tmp.start){ tmp.end=tmp.start; tmp.start=ds; } else tmp.end=ds; tmp.pickStage=0; tmp.preset=null; }
+  refreshPicker();
+}
+function refreshPicker(){
+  document.getElementById('diStart').textContent=fmtDot(tmp.start)+'.';
+  document.getElementById('diEnd').textContent=fmtDot(tmp.end)+'.';
+  document.getElementById('diStart').classList.toggle('act',tmp.pickStage!==1);
+  document.getElementById('diEnd').classList.toggle('act',tmp.pickStage===1);
+  // presets active
+  document.querySelectorAll('.preset').forEach(el=>el.classList.toggle('active',el.textContent===tmp.preset));
+  // calendar highlight
+  document.querySelectorAll('.day[data-d]').forEach(el=>{
+    el.classList.remove('in-range','range-start','range-end');
+    const d=el.dataset.d;
+    if(d===tmp.start) el.classList.add('range-start');
+    if(d===tmp.end) el.classList.add('range-end');
+    if(d>tmp.start && d<tmp.end) el.classList.add('in-range');
+  });
+  // compare preview
+  if(tmp.compare){ const len=diffDays(tmp.start,tmp.end)+1; const pe=addDays(tmp.start,-1), pss=addDays(pe,-(len-1));
+    document.getElementById('cmpPreview').textContent=`vs ${fmtDot(pss)} ~ ${fmtDot(pe)}`; }
+  else document.getElementById('cmpPreview').textContent='';
+}
+function openPicker(){
+  tmp={start:state.start,end:state.end,preset:state.preset,compare:state.compare,pickStage:0};
+  document.getElementById('cmpSwitch').checked=state.compare;
+  buildPresets(); buildCalendar(); refreshPicker();
+  document.getElementById('overlay').classList.add('open');
+  // scroll to selected month
+  setTimeout(()=>{ const el=document.querySelector(`.day[data-d="${tmp.end}"]`); if(el)el.scrollIntoView({block:'center'}); },30);
+}
+document.getElementById('openPicker').onclick=openPicker;
+document.getElementById('btnCancel').onclick=()=>document.getElementById('overlay').classList.remove('open');
+document.getElementById('overlay').onclick=(ev)=>{ if(ev.target.id==='overlay') document.getElementById('overlay').classList.remove('open'); };
+document.getElementById('cmpSwitch').onchange=(ev)=>{ tmp.compare=ev.target.checked; refreshPicker(); };
+document.getElementById('btnApply').onclick=()=>{
+  state.start=tmp.start; state.end=tmp.end; state.preset=tmp.preset; state.compare=tmp.compare;
+  document.getElementById('overlay').classList.remove('open');
+  render();
+};
+
+/* ---------------- footer ---------------- */
+document.getElementById('freshness').textContent='~'+META.rangeEnd;
+document.getElementById('footNotes').innerHTML =
+  `<b>${META.workspace}</b> · 데이터 출처: ${META.source} · GA4 속성: ${META.ga4Property}<br>`+
+  `데이터 추출: ${META.rangeStart} ~ ${META.rangeEnd} (생성 ${META.generated})<br>`+
+  META.notes.map(n=>'· '+n).join('<br>');
+
+/* ---------------- password gate ---------------- */
+// 비밀번호 변경: 아래 GATE_PW 값만 수정하세요. (클라이언트 검증이라 소스보기로 우회 가능 — 외부 노출 억제용)
+const GATE_PW = '22brix2026';
+(function(){
+  const gate=document.getElementById('gate'), pw=document.getElementById('gatePw'), err=document.getElementById('gateErr');
+  if(sessionStorage.getItem('22brix_dash_ok')==='1'){ gate.classList.add('hidden'); }
+  else { setTimeout(()=>pw.focus(),100); }
+  function unlock(){
+    if(pw.value===GATE_PW){ sessionStorage.setItem('22brix_dash_ok','1'); gate.classList.add('hidden'); }
+    else { err.textContent='비밀번호가 올바르지 않습니다.'; pw.select(); }
+  }
+  document.getElementById('gateBtn').onclick=unlock;
+  pw.addEventListener('keydown',e=>{ if(e.key==='Enter') unlock(); });
+})();
+
+/* ---------------- init ---------------- */
+render();
+</script>
+</body>
+</html>
