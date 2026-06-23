@@ -319,8 +319,10 @@
 
     <div class="section-title">검색어별 성과 <span class="badge warn">전체 기간</span></div>
     <div class="grid two-col">
-      <div class="card"><h3 style="margin:0 0 6px;font-size:14px"><span class="chan-tag tag-naver">N</span>네이버 검색어 Top</h3><div class="scroll-x" style="max-height:380px"><table id="nvSearchTable"></table></div></div>
-      <div class="card"><h3 style="margin:0 0 6px;font-size:14px"><span class="chan-tag tag-google">G</span>구글 검색어 Top</h3><div class="scroll-x" style="max-height:380px"><table id="ggSearchTable"></table></div></div>
+      <div class="card"><h3 style="margin:0 0 6px;font-size:14px"><span class="chan-tag tag-naver">N</span>네이버 검색어 Top</h3><div class="scroll-x" style="max-height:380px"><table id="nvSearchTable"></table></div>
+        <p class="hint">매치: 일치 / 확장 / 유사일치. ⚠️ 네이버는 실제 검색어 단위 전환을 제공하지 않아, 전환은 <b>등록 키워드 기준</b>으로 매핑(현재 '광고대행사' 10건).</p></div>
+      <div class="card"><h3 style="margin:0 0 6px;font-size:14px"><span class="chan-tag tag-google">G</span>구글 검색어 Top</h3><div class="scroll-x" style="max-height:380px"><table id="ggSearchTable"></table></div>
+        <p class="hint">매치: 일치(EXACT) / 구문(PHRASE) / 확장(BROAD). 전환·CVR·CPA는 전체 전환 기준. 같은 검색어도 매치유형별로 분리 표시.</p></div>
     </div>
 
     <div class="section-title">매체 / 네트워크별 성과 <span class="badge warn">전체 기간</span></div>
@@ -444,8 +446,9 @@ const D = {
   googleConv: parseCSV(GOOGLE_CONV, ['date','act','conv','allConv'],2),
   googleCampAllConv: parseCSV(GOOGLE_CAMP_ALLCONV, ['date','camp','allConv'],2),
   landing: parseCSV(GA4_LANDING, ['path','sessions','conv','eng'],1),
-  nvSearch: parseCSV(NV_SEARCH, ['kw','imp','clk','cost'],1),
-  ggSearch: parseCSV(GG_SEARCH, ['kw','imp','clk','cost','conv'],1),
+  nvSearch: parseCSV(NV_SEARCH, ['kw','mtype','imp','clk','cost'],2),
+  nvKwConv: parseCSV(NV_KW_CONV, ['kw','conv'],1),
+  ggSearch: parseCSV(GG_SEARCH, ['kw','mtype','imp','clk','cost','conv'],2),
   nvMedia: parseCSV(NV_MEDIA, ['m','imp','clk','cost'],1),
   ggNetwork: parseCSV(GG_NETWORK, ['net','imp','clk','cost','conv'],1),
   nvDow: parseCSV(NV_DOW, ['dow','imp','clk','cost'],0),
@@ -461,6 +464,13 @@ const GG_AGE_LABEL={AGE_RANGE_18_24:'18-24',AGE_RANGE_25_34:'25-34',AGE_RANGE_35
 const DOW_LABEL=['일','월','화','수','목','금','토'];
 const GG_DOW_IDX={SUNDAY:0,MONDAY:1,TUESDAY:2,WEDNESDAY:3,THURSDAY:4,FRIDAY:5,SATURDAY:6};
 const NET_LABEL={SEARCH:'검색',SEARCH_PARTNERS:'검색 파트너',MIXED:'혼합(P맥스 등)'};
+const NV_MATCH={'0':'일치','5':'일치','1':'확장','2':'유사일치'};
+const GG_MATCH={EXACT:'일치',NEAR_EXACT:'일치(유사)',PHRASE:'구문',NEAR_PHRASE:'구문(유사)',BROAD:'확장'};
+// 매치유형 배지 색
+function matchBadge(label){
+  const c = label.startsWith('일치')?'#137333':(label.startsWith('구문')?'#b8860b':(label.startsWith('확장')?'#1a73e8':'#9aa0a6'));
+  return `<span style="font-size:10.5px;font-weight:700;padding:1.5px 7px;border-radius:6px;color:#fff;background:${c}">${label}</span>`;
+}
 const GENDER_LABEL={GNM:'남성',GNF:'여성',GNU:'알 수 없음',MALE:'남성',FEMALE:'여성',UNDETERMINED:'알 수 없음'};
 // 구글 전체 전환(all_conversions) 합계 — 기간 필터
 function googleAllConvSum(s,e){ let c=0; D.googleConv.forEach(r=>{ if(inRange(r.date,s,e)) c+=r.allConv; }); return c; }
@@ -840,9 +850,21 @@ function segTable(el, headName, rows, labelFn, hasConv){
   h+='</tbody>'; document.getElementById(el).innerHTML=h;
 }
 function renderSegments(){
-  // 검색어
-  segTable('nvSearchTable','검색어', D.nvSearch, r=>r.kw, false);
-  segTable('ggSearchTable','검색어', D.ggSearch, r=>r.kw, true);
+  // 검색어 (매치유형 + 전환/CVR/CPA)
+  const nvConvMap=Object.fromEntries(D.nvKwConv.map(r=>[r.kw,r.conv]));
+  function searchTable(el, rows, matchFn){
+    let h='<thead><tr><th>검색어</th><th>매치</th><th>노출</th><th>클릭</th><th>비용</th><th>CTR</th><th>CPC</th><th>전환</th><th>CVR</th><th>CPA</th></tr></thead><tbody>';
+    rows.forEach(r=>{ const cv=r._conv||0;
+      h+=`<tr><td class="name">${r.kw}</td><td>${matchBadge(matchFn(r))}</td>
+        <td>${num(r.imp)}</td><td>${num(r.clk)}</td><td>${won(r.cost)}</td>
+        <td>${fmtPct(pct(r.clk,r.imp))}</td><td>${won(r.clk?r.cost/r.clk:0)}</td>
+        <td>${num(cv)}</td><td>${fmtPct(pct(cv,r.clk))}</td><td>${cv>0?won(r.cost/cv):'–'}</td></tr>`; });
+    h+='</tbody>'; document.getElementById(el).innerHTML=h;
+  }
+  D.nvSearch.forEach(r=> r._conv = nvConvMap[r.kw]||0);   // 네이버: 등록 키워드 기준 전환 매핑
+  D.ggSearch.forEach(r=> r._conv = r.conv||0);            // 구글: 전체 전환
+  searchTable('nvSearchTable', D.nvSearch, r=>NV_MATCH[r.mtype]||r.mtype);
+  searchTable('ggSearchTable', D.ggSearch, r=>GG_MATCH[r.mtype]||r.mtype);
   // 매체/네트워크
   segTable('nvMediaTable','매체', D.nvMedia, r=>r.m, false);
   segTable('ggNetworkTable','네트워크', D.ggNetwork, r=>NET_LABEL[r.net]||r.net, true);
