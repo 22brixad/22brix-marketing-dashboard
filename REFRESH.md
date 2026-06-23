@@ -41,7 +41,8 @@
 
 ### 광고 상세(세그먼트) — 전체 기간, 모두 교체
 네이버(execute_naver_sql):
-- 검색어: `SELECT search_keyword, SUM(impression), SUM(click), SUM(cost) FROM stats_exp_keyword GROUP BY search_keyword ORDER BY cost DESC LIMIT 25` → `NV_SEARCH`
+- 검색어: `SELECT search_keyword, search_keyword_type, SUM(impression), SUM(click), SUM(cost) FROM stats_exp_keyword GROUP BY search_keyword, search_keyword_type ORDER BY cost DESC LIMIT 25` → `NV_SEARCH` (matchType 컬럼=search_keyword_type; 0/5=일치,1=확장,2=유사일치)
+- 검색어(등록키워드) 전환: `SELECT k.keyword, SUM(c.conversion_count) FROM stats_ad_conversion c LEFT JOIN master_keywords k ON c.ncc_keyword_id=k.ncc_keyword_id GROUP BY k.keyword` (null 제외) → `NV_KW_CONV` (네이버는 실제 검색어 단위 전환 미제공 → 검색어 표는 이 등록키워드 전환을 텍스트 일치로 매핑)
 - 매체: `... FROM stats_ad GROUP BY media_name ORDER BY cost DESC` → `NV_MEDIA`
 - 요일: `SELECT EXTRACT(DAYOFWEEK FROM date) dow, SUM(...) FROM stats_ad GROUP BY dow` (1=일~7=토) → `NV_DOW`
 - 연령: `SELECT target_code, SUM(...) FROM stats_criterion WHERE target_type='AG' GROUP BY target_code` → `NV_AGE`
@@ -49,7 +50,7 @@
 - ※ 네이버는 시간대(SD) 데이터 없음.
 
 구글(execute_gaql, 범위 BETWEEN start AND end):
-- 검색어: `SELECT search_term_view.search_term, metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions FROM search_term_view ORDER BY metrics.cost_micros DESC LIMIT 25` → `GG_SEARCH`
+- 검색어: `SELECT search_term_view.search_term, segments.search_term_match_type, metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.all_conversions FROM search_term_view ORDER BY metrics.cost_micros DESC LIMIT 25` → `GG_SEARCH` (matchType=search_term_match_type EXACT/PHRASE/NEAR_PHRASE/BROAD; conv=all_conversions 반올림; 같은 검색어도 매치유형별 분리 행)
 - 네트워크: `SELECT segments.ad_network_type, metrics... FROM customer` → `GG_NETWORK`
 - 요일: `SELECT segments.day_of_week, metrics... FROM customer` → `GG_DOW`
 - 시간대: `SELECT segments.hour, metrics... FROM customer ORDER BY segments.hour` → `GG_HOUR`
