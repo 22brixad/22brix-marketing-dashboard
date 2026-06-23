@@ -39,6 +39,24 @@
 - `country` × (sessions,totalUsers,conversions) → `GA4_COUNTRY`
 - `country,region` (South Korea만 추출) → `GA4_KR_REGION`
 
+### 광고 상세(세그먼트) — 전체 기간, 모두 교체
+네이버(execute_naver_sql):
+- 검색어: `SELECT search_keyword, SUM(impression), SUM(click), SUM(cost) FROM stats_exp_keyword GROUP BY search_keyword ORDER BY cost DESC LIMIT 25` → `NV_SEARCH`
+- 매체: `... FROM stats_ad GROUP BY media_name ORDER BY cost DESC` → `NV_MEDIA`
+- 요일: `SELECT EXTRACT(DAYOFWEEK FROM date) dow, SUM(...) FROM stats_ad GROUP BY dow` (1=일~7=토) → `NV_DOW`
+- 연령: `SELECT target_code, SUM(...) FROM stats_criterion WHERE target_type='AG' GROUP BY target_code` → `NV_AGE`
+- 성별: `... WHERE target_type='GN' ...` → `NV_GENDER`
+- ※ 네이버는 시간대(SD) 데이터 없음.
+
+구글(execute_gaql, 범위 BETWEEN start AND end):
+- 검색어: `SELECT search_term_view.search_term, metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions FROM search_term_view ORDER BY metrics.cost_micros DESC LIMIT 25` → `GG_SEARCH`
+- 네트워크: `SELECT segments.ad_network_type, metrics... FROM customer` → `GG_NETWORK`
+- 요일: `SELECT segments.day_of_week, metrics... FROM customer` → `GG_DOW`
+- 시간대: `SELECT segments.hour, metrics... FROM customer ORDER BY segments.hour` → `GG_HOUR`
+- 연령: `SELECT ad_group_criterion.age_range.type, metrics... FROM age_range_view` → `GG_AGE`
+- 성별: `SELECT ad_group_criterion.gender.type, metrics... FROM gender_view` → `GG_GENDER`
+- 비용은 모두 cost_micros÷1,000,000(반올림).
+
 ## 검증 체크리스트
 
 - 네이버 총비용 = 광고주센터 총비용과 ±몇 원(VAT 반올림) 일치?
