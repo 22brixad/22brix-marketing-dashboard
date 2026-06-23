@@ -594,11 +594,13 @@ function renderAds(s,e,ps,pe){
   camps.sort((a,b)=>b.cost-a.cost);
   document.getElementById('campCount').textContent = camps.length+'개';
   if(!camps.length){ document.getElementById('campTable').innerHTML='<tbody><tr><td class="nodata">선택 기간에 캠페인 데이터가 없습니다.</td></tr></tbody>'; return; }
-  let html='<thead><tr><th>캠페인</th><th>광고비</th><th>노출</th><th>클릭</th><th>CTR</th><th>CPC</th><th>전환</th></tr></thead><tbody>';
+  let html='<thead><tr><th>캠페인</th><th>광고비</th><th>노출</th><th>클릭</th><th>CTR</th><th>CPC</th><th>전환</th><th>CVR</th><th>CPA</th></tr></thead><tbody>';
   camps.forEach(c=>{
+    const cv=c.conv||0;
     html+=`<tr><td class="name"><span class="chan-tag ${c.ch==='naver'?'tag-naver':'tag-google'}">${c.ch==='naver'?'N':'G'}</span>${c.name}</td>
       <td>${won(c.cost)}</td><td>${num(c.imp)}</td><td>${num(c.clk)}</td>
-      <td>${fmtPct(pct(c.clk,c.imp))}</td><td>${won(c.clk?c.cost/c.clk:0)}</td><td>${num(c.conv||0)}</td></tr>`;
+      <td>${fmtPct(pct(c.clk,c.imp))}</td><td>${won(c.clk?c.cost/c.clk:0)}</td><td>${num(cv)}</td>
+      <td>${fmtPct(pct(cv,c.clk))}</td><td>${cv>0?won(c.cost/cv):'–'}</td></tr>`;
   });
   html+='</tbody>';
   document.getElementById('campTable').innerHTML=html;
