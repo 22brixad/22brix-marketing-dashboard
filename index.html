@@ -70,6 +70,13 @@
   .chan-tag{font-size:10.5px;font-weight:700;padding:1.5px 7px;border-radius:6px;margin-right:6px;color:#fff}
   .tag-naver{background:var(--naver)} .tag-google{background:var(--gad)}
   .scroll-x{overflow-x:auto}
+  /* 정렬 + 검색 */
+  table.srt th{cursor:pointer;user-select:none}
+  table.srt th::after{content:'⇅';font-size:9px;opacity:.3;margin-left:3px}
+  table.srt th.asc::after{content:'▲';font-size:9px;opacity:.9;color:var(--blue)}
+  table.srt th.desc::after{content:'▼';font-size:9px;opacity:.9;color:var(--blue)}
+  .tbl-search{display:block;margin:0 0 9px auto;width:200px;max-width:100%;padding:7px 11px;border:1px solid var(--line);border-radius:9px;font-size:12.5px}
+  .tbl-search:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft)}
   .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:4px}
   .legend span{display:inline-flex;align-items:center;gap:6px}
   .hint{color:var(--muted);font-size:11.5px;margin-top:8px}
@@ -1061,9 +1068,46 @@ const GATE_PW = '22brix2026';
   pw.addEventListener('keydown',e=>{ if(e.key==='Enter') unlock(); });
 })();
 
+/* ---------------- 표 정렬 + 검색 ---------------- */
+function _cellVal(r,idx){ const t=(r.cells[idx]?.innerText||'').trim(); const n=parseFloat(t.replace(/[₩,%\s]/g,'')); return {n:(t===''||t==='–'||isNaN(n))?null:n, t}; }
+const _isSummary = r => /합계|총계/.test(r.cells[0]?.innerText||'');
+function sortTableCol(table, th){
+  const tb=table.tBodies[0]; if(!tb) return;
+  const ths=[...th.parentNode.children], idx=ths.indexOf(th);
+  const dir = th.classList.contains('asc') ? 'desc' : 'asc';
+  ths.forEach(h=>h.classList.remove('asc','desc')); th.classList.add(dir);
+  const rows=[...tb.rows], data=rows.filter(r=>!_isSummary(r)), summ=rows.filter(_isSummary);
+  data.sort((a,b)=>{ const A=_cellVal(a,idx),B=_cellVal(b,idx); let c;
+    if(A.n!==null&&B.n!==null) c=A.n-B.n; else c=String(A.t).localeCompare(String(B.t),'ko');
+    return dir==='asc'?c:-c; });
+  data.forEach(r=>tb.appendChild(r)); summ.forEach(r=>tb.appendChild(r));
+}
+function filterTableRows(table,q){ const tb=table.tBodies[0]; if(!tb) return; q=(q||'').trim().toLowerCase();
+  [...tb.rows].forEach(r=>{ r.style.display=(!q||_isSummary(r)||r.innerText.toLowerCase().includes(q))?'':'none'; }); }
+function enhanceTable(id, withSearch){
+  const table=document.getElementById(id); if(!table) return;
+  table.classList.add('srt');
+  table.addEventListener('click', e=>{ const th=e.target.closest('th'); if(th&&table.contains(th)) sortTableCol(table,th); });
+  if(withSearch){
+    const card=table.closest('.card'); if(!card) return;
+    let anchor=table; while(anchor.parentNode && anchor.parentNode!==card) anchor=anchor.parentNode;
+    const inp=document.createElement('input'); inp.type='search'; inp.className='tbl-search'; inp.placeholder='검색...';
+    inp.addEventListener('input',()=>filterTableRows(table,inp.value));
+    card.insertBefore(inp, anchor);
+    new MutationObserver(()=>{ if(inp.value) filterTableRows(table,inp.value); }).observe(table,{childList:true,subtree:true});
+  }
+}
+function initTableTools(){
+  const sortOnly=['ovChannelTable','gaChannelTable','ggNetworkTable','nvConvTable','ggConvTable','gaCohortTable','ga4ConvTable'];
+  const withSearch=['campTable','nvSearchTable','ggSearchTable','nvMediaTable','gaSourceTable','gaPageTable','gaEventTable','gaCountryTable','gaKrRegionTable','gaLandingTable'];
+  sortOnly.forEach(id=>enhanceTable(id,false));
+  withSearch.forEach(id=>enhanceTable(id,true));
+}
+
 /* ---------------- init ---------------- */
 render();
 renderSegments();   // 전체 기간 고정 — 1회 렌더
+initTableTools();   // 모든 표에 정렬, 데이터 표에 검색 추가
 </script>
 </body>
 </html>
