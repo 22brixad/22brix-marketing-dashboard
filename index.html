@@ -449,7 +449,7 @@ const D = {
   nvSearch: parseCSV(NV_SEARCH, ['kw','mtype','imp','clk','cost'],2),
   nvKwConv: parseCSV(NV_KW_CONV, ['kw','conv'],1),
   ggSearch: parseCSV(GG_SEARCH, ['kw','mtype','imp','clk','cost','conv'],2),
-  nvMedia: parseCSV(NV_MEDIA, ['m','imp','clk','cost'],1),
+  nvMedia: parseCSV(NV_MEDIA, ['m','imp','clk','cost','conv'],1),
   ggNetwork: parseCSV(GG_NETWORK, ['net','imp','clk','cost','conv'],1),
   nvDow: parseCSV(NV_DOW, ['dow','imp','clk','cost'],0),
   ggDow: parseCSV(GG_DOW, ['day','imp','clk','cost','conv'],1),
@@ -844,9 +844,10 @@ function renderGA4(s,e,ps,pe){
 }
 
 /* ---------------- segments (광고 상세) — 전체 기간, 1회 렌더 ---------------- */
-function segTable(el, headName, rows, labelFn, hasConv){
-  let h=`<thead><tr><th>${headName}</th><th>노출</th><th>클릭</th><th>비용</th><th>CTR</th><th>CPC</th>${hasConv?'<th>전환</th>':''}</tr></thead><tbody>`;
-  rows.forEach(r=>{ h+=`<tr><td class="name">${labelFn(r)}</td><td>${num(r.imp)}</td><td>${num(r.clk)}</td><td>${won(r.cost)}</td><td>${fmtPct(pct(r.clk,r.imp))}</td><td>${won(r.clk?r.cost/r.clk:0)}</td>${hasConv?`<td>${num(r.conv||0)}</td>`:''}</tr>`; });
+function segTable(el, headName, rows, labelFn){
+  let h=`<thead><tr><th>${headName}</th><th>노출</th><th>클릭</th><th>비용</th><th>CTR</th><th>CPC</th><th>전환</th><th>CVR</th><th>CPA</th></tr></thead><tbody>`;
+  rows.forEach(r=>{ const cv=r.conv||0;
+    h+=`<tr><td class="name">${labelFn(r)}</td><td>${num(r.imp)}</td><td>${num(r.clk)}</td><td>${won(r.cost)}</td><td>${fmtPct(pct(r.clk,r.imp))}</td><td>${won(r.clk?r.cost/r.clk:0)}</td><td>${num(cv)}</td><td>${fmtPct(pct(cv,r.clk))}</td><td>${cv>0?won(r.cost/cv):'–'}</td></tr>`; });
   h+='</tbody>'; document.getElementById(el).innerHTML=h;
 }
 function renderSegments(){
@@ -866,8 +867,8 @@ function renderSegments(){
   searchTable('nvSearchTable', D.nvSearch, r=>NV_MATCH[r.mtype]||r.mtype);
   searchTable('ggSearchTable', D.ggSearch, r=>GG_MATCH[r.mtype]||r.mtype);
   // 매체/네트워크
-  segTable('nvMediaTable','매체', D.nvMedia, r=>r.m, false);
-  segTable('ggNetworkTable','네트워크', D.ggNetwork, r=>NET_LABEL[r.net]||r.net, true);
+  segTable('nvMediaTable','매체', D.nvMedia, r=>r.m);
+  segTable('ggNetworkTable','네트워크', D.ggNetwork, r=>NET_LABEL[r.net]||r.net);
   // 요일
   const nvByDow=[0,0,0,0,0,0,0]; D.nvDow.forEach(r=>nvByDow[r.dow-1]=r.cost);
   const ggByDow=[0,0,0,0,0,0,0]; D.ggDow.forEach(r=>ggByDow[GG_DOW_IDX[r.day]]=r.cost);
