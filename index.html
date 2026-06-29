@@ -527,7 +527,8 @@ function presetRange(name){
     case '최근 30일 (오늘 제외)': return [addDays(t,-30), addDays(t,-1)];
   }
 }
-let state = { start:'2026-06-16', end:'2026-06-22', preset:'최근 7일 (오늘 제외)', compare:false };
+// 기본 범위는 META.today 기준으로 매번 계산 (데이터 갱신 시 자동으로 따라감)
+let state = (function(){ const p='최근 7일 (오늘 제외)'; const [s,e]=presetRange(p); return {start:s, end:e, preset:p, compare:false}; })();
 // temp state used inside picker
 let tmp = {};
 
